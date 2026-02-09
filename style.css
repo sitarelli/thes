@@ -393,14 +393,15 @@ body {
     bottom: 0;
     left: 0;
     right: 0;
-    height: 140px;
+    height: 100%;
     pointer-events: none;
 }
 
 .controls-left,
 .controls-right {
     position: absolute;
-    bottom: 20px;
+    top: 50%;                    /* NUOVO: Posiziona a metà altezza */
+    transform: translateY(-50%); /* NUOVO: Centra perfettamente */
     display: flex;
     gap: 15px;
     pointer-events: all;
@@ -570,12 +571,15 @@ body {
         width: 65px;
         height: 65px;
     }
-    
+   
+/* Rimosso override posizione bottom per mantenere centraggio verticale
     .controls-left,
     .controls-right {
         bottom: 10px;
     }
-}
+    */
+ 
+    }
 
 /* ============================================
    RETRY BUTTON (creato dinamicamente dal JS)
