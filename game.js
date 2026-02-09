@@ -106,7 +106,7 @@ let gameRunning = false;
 // Controllo frame rate per normalizzare la velocità su tutti i dispositivi
 let lastTime = 0;
 const targetFPS = 60;
-const gameSpeed = 1; // MODIFICA QUESTO VALORE: 1.0 = normale, 1.5 = più veloce, 0.8 = più lento
+const gameSpeed = 1.5; // MODIFICA QUESTO VALORE: 1.0 = normale, 1.5 = più veloce, 0.8 = più lento
 const frameTime = 1000 / (targetFPS * gameSpeed);
 
 // Particelle per effetti lava
