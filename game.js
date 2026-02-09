@@ -22,10 +22,10 @@ const config = {
 // FIX VELOCITÀ ANDROID / MOBILE
 // ----------------------------------
 if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
-    config.baseSpeed *= 0.65;
-    config.baseGravity *= 0.65;
-    config.baseThrust *= 0.65;
-    config.enemySpeedMultiplier *= 0.6;
+    config.baseSpeed *= 0.45;
+    config.baseGravity *= 0.45;
+    config.baseThrust *= 0.45;
+    config.enemySpeedMultiplier *= 0.4;
 }
 
 
