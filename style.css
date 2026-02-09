@@ -521,6 +521,11 @@ body {
     #touch-controls {
         display: block !important;
     }
+
+    /* Sposta l'area di gioco a destra per non coprirla col Joystick */
+    .game-wrapper {
+        padding-left: 60px; 
+    }
 }
 
 /* ============================================
