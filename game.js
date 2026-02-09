@@ -7,10 +7,10 @@ const config = {
     viewportHeight: 510,
     // DINAMICHE "GOOD GAME" RIPRISTINATE
     baseGravity: 0.002,    
-    baseSpeed: 0.09,       
+    baseSpeed: 0.15,       
     baseThrust: -0.009,    
-    maxFallSpeed: 0.07,     
-    maxFlySpeed: -0.08,     
+    maxFallSpeed: 0.10,     
+    maxFlySpeed: -0.10,     
     enemySpeedMultiplier: 0.08, 
     zoom: 1, 
     tileSize: 0,
