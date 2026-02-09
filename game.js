@@ -1028,71 +1028,83 @@ if (isMobileDevice() && tapOverlay) {
     }, { passive: true });
 }
 
+
 // Touch Controls Setup
-const touchButtons = {
-    left: document.getElementById('btn-left'),
-    right: document.getElementById('btn-right'),
-    fly: document.getElementById('btn-fly')
-};
+function initTouchControls() {
+    // Riferimenti ai nuovi elementi del DOM
+    const joystickBase = document.getElementById('joystick-base');
+    const joystickStick = document.getElementById('joystick-stick');
+    const btnFly = document.getElementById('btn-fly');
 
-// Previeni comportamento di default per tutti i pulsanti touch
-Object.values(touchButtons).forEach(btn => {
-    if (btn) {
-        btn.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-        });
-        btn.addEventListener('touchend', (e) => e.preventDefault());
-        btn.addEventListener('touchcancel', (e) => e.preventDefault());
-    }
-});
+    // Se mancano elementi (es. siamo su desktop o errore HTML), usciamo
+    if (!joystickBase || !btnFly) return;
 
-// LEFT button
-if (touchButtons.left) {
-    touchButtons.left.addEventListener('touchstart', () => {
-        if (audioCtx.state === 'suspended') audioCtx.resume();
-        keys.left = true;
-    });
-    
-    touchButtons.left.addEventListener('touchend', () => {
+    // --- LOGICA JOYSTICK (Sinistra / Destra) ---
+    let startX = 0;
+    const maxDist = 40; // Massima distanza visiva del pomello (pixel)
+    const deadZone = 10; // Zona morta centrale
+
+    // 1. Inizio tocco: salva la posizione iniziale X
+    joystickBase.addEventListener('touchstart', (e) => {
+        if (audioCtx.state === 'suspended') audioCtx.resume(); // Sblocca audio su mobile
+        e.preventDefault();
+        startX = e.changedTouches[0].clientX;
+    }, { passive: false });
+
+    // 2. Movimento: calcola delta e muovi stick + personaggio
+    joystickBase.addEventListener('touchmove', (e) => {
+        e.preventDefault();
+        const currentX = e.changedTouches[0].clientX;
+        const deltaX = currentX - startX;
+
+        // Limita il movimento visivo del pomello
+        const moveX = Math.max(-maxDist, Math.min(maxDist, deltaX));
+        joystickStick.style.transform = `translate(calc(-50% + ${moveX}px), -50%)`;
+
+        // Applica input al gioco
+        if (moveX < -deadZone) {
+            keys.left = true;
+            keys.right = false;
+        } else if (moveX > deadZone) {
+            keys.right = true;
+            keys.left = false;
+        } else {
+            keys.left = false;
+            keys.right = false;
+        }
+    }, { passive: false });
+
+    // 3. Fine tocco: resetta tutto
+    const resetJoystick = (e) => {
+        if(e) e.preventDefault();
         keys.left = false;
-    });
-    
-    touchButtons.left.addEventListener('touchcancel', () => {
-        keys.left = false;
-    });
-}
-
-// RIGHT button
-if (touchButtons.right) {
-    touchButtons.right.addEventListener('touchstart', () => {
-        if (audioCtx.state === 'suspended') audioCtx.resume();
-        keys.right = true;
-    });
-    
-    touchButtons.right.addEventListener('touchend', () => {
         keys.right = false;
-    });
-    
-    touchButtons.right.addEventListener('touchcancel', () => {
-        keys.right = false;
-    });
-}
+        joystickStick.style.transform = `translate(-50%, -50%)`; // Torna al centro
+    };
 
-// FLY button (equivalente a SPACE)
-if (touchButtons.fly) {
-    touchButtons.fly.addEventListener('touchstart', () => {
+    joystickBase.addEventListener('touchend', resetJoystick);
+    joystickBase.addEventListener('touchcancel', resetJoystick);
+
+    // --- LOGICA TASTO FLY ---
+    const handleFlyStart = (e) => {
         if (audioCtx.state === 'suspended') audioCtx.resume();
+        e.preventDefault();
         keys.up = true;
-    });
-    
-    touchButtons.fly.addEventListener('touchend', () => {
+    };
+    const handleFlyEnd = (e) => {
+        e.preventDefault();
         keys.up = false;
-    });
-    
-    touchButtons.fly.addEventListener('touchcancel', () => {
-        keys.up = false;
-    });
+    };
+
+    btnFly.addEventListener('touchstart', handleFlyStart, { passive: false });
+    btnFly.addEventListener('touchend', handleFlyEnd);
+    btnFly.addEventListener('touchcancel', handleFlyEnd);
 }
+
+// AVVIA I CONTROLLI TOUCH
+initTouchControls();
+
+
 
 // Gestione orientamento schermo
 function checkOrientation() {
