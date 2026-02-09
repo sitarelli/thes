@@ -864,32 +864,76 @@ function restartGame() {
 // TOUCH CONTROLS & FULLSCREEN SUPPORT
 // ============================================
 
-// Funzione per attivare fullscreen su mobile
-function requestFullscreen() {
-    const elem = document.documentElement;
-    if (elem.requestFullscreen) {
-        elem.requestFullscreen();
-    } else if (elem.webkitRequestFullscreen) {
-        elem.webkitRequestFullscreen();
-    } else if (elem.mozRequestFullScreen) {
-        elem.mozRequestFullScreen();
-    } else if (elem.msRequestFullscreen) {
-        elem.msRequestFullscreen();
-    }
-}
-
 // Controlla se è un dispositivo mobile
 function isMobileDevice() {
     return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 }
 
-// Attiva fullscreen al primo tocco/click su mobile
-let fullscreenActivated = false;
-function activateFullscreenOnce() {
-    if (!fullscreenActivated && isMobileDevice()) {
-        requestFullscreen();
-        fullscreenActivated = true;
+// Controlla se è iOS
+function isIOS() {
+    return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+}
+
+// Funzione per attivare fullscreen (con gestione iOS)
+function requestFullscreen() {
+    const elem = document.documentElement;
+    
+    if (isIOS()) {
+        // iOS non supporta fullscreen API completa, ma possiamo nascondere la barra
+        // Forza scroll per nascondere la barra degli indirizzi
+        window.scrollTo(0, 1);
+        
+        // Tenta comunque webkitEnterFullscreen se disponibile
+        if (elem.webkitRequestFullscreen) {
+            elem.webkitRequestFullscreen().catch(() => {
+                // Fallback: almeno nascondiamo la barra con scroll
+                window.scrollTo(0, 1);
+            });
+        }
+    } else {
+        // Android e altri dispositivi
+        if (elem.requestFullscreen) {
+            elem.requestFullscreen().catch(() => console.log('Fullscreen non disponibile'));
+        } else if (elem.webkitRequestFullscreen) {
+            elem.webkitRequestFullscreen().catch(() => console.log('Fullscreen non disponibile'));
+        } else if (elem.mozRequestFullScreen) {
+            elem.mozRequestFullScreen().catch(() => console.log('Fullscreen non disponibile'));
+        } else if (elem.msRequestFullscreen) {
+            elem.msRequestFullscreen().catch(() => console.log('Fullscreen non disponibile'));
+        }
     }
+}
+
+// Gestione overlay "Tap to Start"
+let fullscreenActivated = false;
+const tapOverlay = document.getElementById('tap-to-start');
+
+// Mostra overlay su mobile all'avvio
+if (isMobileDevice() && tapOverlay) {
+    tapOverlay.classList.add('show');
+    
+    // Gestione tocco/click sull'overlay
+    tapOverlay.addEventListener('click', function() {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        
+        // Attiva fullscreen
+        requestFullscreen();
+        
+        // Nascondi overlay
+        tapOverlay.classList.remove('show');
+        fullscreenActivated = true;
+        
+        // Per iOS, forza scroll dopo un breve delay
+        if (isIOS()) {
+            setTimeout(() => {
+                window.scrollTo(0, 1);
+            }, 100);
+        }
+    });
+    
+    tapOverlay.addEventListener('touchstart', function(e) {
+        e.preventDefault();
+    });
 }
 
 // Touch Controls Setup
@@ -904,7 +948,6 @@ Object.values(touchButtons).forEach(btn => {
     if (btn) {
         btn.addEventListener('touchstart', (e) => {
             e.preventDefault();
-            activateFullscreenOnce();
         });
         btn.addEventListener('touchend', (e) => e.preventDefault());
         btn.addEventListener('touchcancel', (e) => e.preventDefault());
@@ -959,10 +1002,6 @@ if (touchButtons.fly) {
     });
 }
 
-// Attiva fullscreen anche al primo click/touch sul canvas
-canvas.addEventListener('click', activateFullscreenOnce, { once: true });
-canvas.addEventListener('touchstart', activateFullscreenOnce, { once: true });
-
 // Gestione orientamento schermo
 function checkOrientation() {
     const rotateMsg = document.getElementById('rotate-message');
@@ -981,3 +1020,25 @@ function checkOrientation() {
 window.addEventListener('load', checkOrientation);
 window.addEventListener('resize', checkOrientation);
 window.addEventListener('orientationchange', checkOrientation);
+
+// Per iOS: mantieni nascoste le barre del browser
+if (isIOS()) {
+    // Nascondi barra all'avvio
+    window.addEventListener('load', () => {
+        setTimeout(() => window.scrollTo(0, 1), 100);
+    });
+    
+    // Mantieni nascosta quando l'utente interagisce
+    window.addEventListener('touchstart', () => {
+        if (fullscreenActivated) {
+            setTimeout(() => window.scrollTo(0, 1), 0);
+        }
+    });
+    
+    // Gestisci il resize (quando appare/scompare la tastiera o barra indirizzi)
+    window.addEventListener('resize', () => {
+        if (fullscreenActivated) {
+            setTimeout(() => window.scrollTo(0, 1), 0);
+        }
+    });
+}

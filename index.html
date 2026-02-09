@@ -2,12 +2,14 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, minimal-ui">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-fullscreen">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="THESEUS">
     <meta name="screen-orientation" content="landscape">
     <meta name="orientation" content="landscape">
+    <meta name="theme-color" content="#000000">
     <title>THESEUS // ARCADE SYSTEM</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -20,6 +22,17 @@
         <div class="rotate-content">
             <div class="rotate-icon">📱</div>
             <p>Ruota il dispositivo in orizzontale</p>
+        </div>
+    </div>
+
+    <!-- Overlay "Tap to Start" per attivare fullscreen -->
+    <div id="tap-to-start" class="tap-overlay">
+        <div class="tap-content">
+            <div class="tap-title">THESEUS</div>
+            <div class="tap-subtitle">MSX VittoGol Revival</div>
+            <div class="tap-icon">👆</div>
+            <div class="tap-button">TAP TO START</div>
+            <div class="tap-hint">Il gioco andrà a schermo intero</div>
         </div>
     </div>
 
