@@ -103,6 +103,12 @@ const camera = { x: 0, y: 0 };
 let currentMap = [];
 let gameRunning = false;
 
+// Controllo frame rate per normalizzare la velocità su tutti i dispositivi
+let lastTime = 0;
+const targetFPS = 60;
+const gameSpeed = 2; // MODIFICA QUESTO VALORE: 1.0 = normale, 1.5 = più veloce, 0.8 = più lento
+const frameTime = 1000 / (targetFPS * gameSpeed);
+
 // Particelle per effetti lava
 let lavaParticles = [];
 const lavaAnimTime = { value: 0 };
@@ -808,8 +814,20 @@ window.addEventListener('keyup', e => {
     if(e.code==='Space') keys.up=false; 
 });
 
-function loop() { if(gameRunning) update(); draw(); requestAnimationFrame(loop); }
-loop();
+function loop(currentTime) { 
+    if (!lastTime) lastTime = currentTime;
+    const deltaTime = currentTime - lastTime;
+    
+    // Esegui update solo se è passato abbastanza tempo (frame limiting)
+    if (deltaTime >= frameTime) {
+        if(gameRunning) update();
+        draw();
+        lastTime = currentTime - (deltaTime % frameTime); // Mantieni sincronizzazione
+    }
+    
+    requestAnimationFrame(loop);
+}
+loop(0);
 
 function showRetryButton() {
     // Rimuoviamo se esiste già
