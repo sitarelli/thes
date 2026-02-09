@@ -18,6 +18,18 @@ const config = {
     hitboxMargin: 0.25 
 };
 
+// ----------------------------------
+// FIX VELOCITÀ ANDROID / MOBILE
+// ----------------------------------
+if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+    config.baseSpeed *= 0.75;
+    config.baseGravity *= 0.75;
+    config.baseThrust *= 0.75;
+    config.enemySpeedMultiplier *= 0.8;
+}
+
+
+
 const canvas = document.getElementById('game-canvas');
 const ctx = canvas.getContext('2d');
 canvas.width = config.viewportWidth;
