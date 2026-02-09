@@ -1,0 +1,400 @@
+/* ============================================
+   THESEUS - NEO-ARCADE CYBERPUNK THEME (COMPACT)
+   ============================================ */
+
+:root {
+    /* Color Palette - Neon Cyberpunk */
+    --neon-cyan: #00ffff;
+    --neon-magenta: #ff00ff;
+    --neon-yellow: #ffff00;
+    --neon-green: #00ff41;
+    --neon-red: #ff0040;
+    --neon-blue: #0040ff;
+    --neon-orange: #ff6600;
+    
+    /* Dark base colors */
+    --bg-dark: #000000;
+    --bg-darker: #000000;
+    --panel-bg: rgba(10, 10, 30, 0.9);
+    --frame-color: #1a1a2e;
+    
+    /* Glow effects */
+    --glow-cyan: 0 0 10px var(--neon-cyan), 0 0 20px var(--neon-cyan), 0 0 30px var(--neon-cyan);
+    --glow-magenta: 0 0 10px var(--neon-magenta), 0 0 20px var(--neon-magenta);
+    --glow-yellow: 0 0 10px var(--neon-yellow), 0 0 20px var(--neon-yellow);
+    --glow-green: 0 0 10px var(--neon-green), 0 0 20px var(--neon-green);
+    --glow-orange: 0 0 10px var(--neon-orange), 0 0 20px var(--neon-orange);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background: #000000;
+    font-family: 'Share Tech Mono', monospace;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    color: var(--neon-cyan);
+    overflow: hidden;
+    position: relative;
+}
+
+/* Main game container - COMPACT */
+#game-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    position: relative;
+    z-index: 1;
+    padding: 15px;
+    background: linear-gradient(
+        135deg,
+        rgba(10, 10, 30, 0.4) 0%,
+        rgba(20, 0, 40, 0.4) 100%
+    );
+    border-radius: 15px;
+    box-shadow: 
+        0 0 60px rgba(0, 255, 255, 0.2),
+        inset 0 0 60px rgba(255, 0, 255, 0.05);
+}
+
+/* ============================================
+   COMPACT HEADER
+   ============================================ */
+
+.arcade-header {
+    width: 100%;
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 8px;
+    background: linear-gradient(
+        180deg,
+        rgba(0, 255, 255, 0.1) 0%,
+        transparent 100%
+    );
+    border-bottom: 2px solid var(--neon-cyan);
+    box-shadow: 0 2px 20px rgba(0, 255, 255, 0.3);
+}
+
+.title-section {
+    text-align: center;
+}
+
+.glitch-text {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 24px;
+    font-weight: 900;
+    color: var(--neon-cyan);
+    text-shadow: var(--glow-cyan);
+    letter-spacing: 6px;
+    animation: glitchPulse 3s ease-in-out infinite;
+}
+
+@keyframes glitchPulse {
+    0%, 100% { 
+        text-shadow: var(--glow-cyan);
+        transform: translateX(0);
+    }
+    50% { 
+        text-shadow: 
+            var(--glow-cyan),
+            2px 0 var(--neon-magenta),
+            -2px 0 var(--neon-yellow);
+    }
+}
+
+/* ============================================
+   COMPACT HUD
+   ============================================ */
+
+#hud {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+    max-width: 800px;
+    padding: 8px;
+    background: var(--panel-bg);
+    border: 2px solid var(--neon-cyan);
+    border-radius: 8px;
+    box-shadow: 
+        var(--glow-cyan),
+        inset 0 0 20px rgba(0, 255, 255, 0.1);
+    position: relative;
+    overflow: hidden;
+}
+
+/* Animated background bars in HUD */
+#hud::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 200%;
+    height: 100%;
+    background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(0, 255, 255, 0.1) 50%,
+        transparent 100%
+    );
+    animation: hudSweep 4s ease-in-out infinite;
+}
+
+@keyframes hudSweep {
+    0%, 100% { transform: translateX(0); }
+    50% { transform: translateX(50%); }
+}
+
+.hud-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 6px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(0, 255, 255, 0.3);
+    border-radius: 4px;
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.hud-section:hover {
+    transform: translateY(-2px);
+    border-color: var(--neon-cyan);
+    box-shadow: var(--glow-cyan);
+}
+
+.hud-label {
+    font-size: 9px;
+    color: var(--neon-yellow);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    opacity: 0.7;
+}
+
+.hud-value {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--neon-cyan);
+    text-shadow: var(--glow-cyan);
+    min-width: 30px;
+    text-align: center;
+}
+
+.hud-value.hearts {
+    color: var(--neon-red);
+    text-shadow: var(--glow-cyan);
+    animation: heartbeat 2s ease-in-out infinite;
+}
+
+@keyframes heartbeat {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+.hud-section.pulse {
+    animation: borderPulse 2s ease-in-out infinite;
+}
+
+@keyframes borderPulse {
+    0%, 100% { border-color: rgba(0, 255, 255, 0.3); }
+    50% { border-color: var(--neon-cyan); }
+}
+
+.key-section .hud-value {
+    font-size: 20px;
+}
+
+.key-indicator {
+    color: var(--neon-red);
+    text-shadow: 0 0 10px var(--neon-red), 0 0 20px var(--neon-red);
+    transition: all 0.3s ease;
+}
+
+.key-indicator.has-key {
+    color: var(--neon-green);
+    text-shadow: var(--glow-green);
+    animation: keyGlow 1s ease-in-out infinite;
+}
+
+@keyframes keyGlow {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+}
+
+/* ============================================
+   ARCADE FRAME - COMPACT
+   ============================================ */
+
+.arcade-frame {
+    position: relative;
+    padding: 15px;
+    background: linear-gradient(
+        135deg,
+        var(--frame-color) 0%,
+        #0a0a1e 100%
+    );
+    border-radius: 10px;
+    box-shadow: 
+        0 0 40px rgba(255, 0, 255, 0.3),
+        inset 0 0 40px rgba(0, 0, 0, 0.5);
+}
+
+/* Frame corners */
+.frame-corner {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    border: 3px solid var(--neon-magenta);
+    box-shadow: var(--glow-magenta);
+}
+
+.frame-corner.tl {
+    top: 0;
+    left: 0;
+    border-right: none;
+    border-bottom: none;
+    border-top-left-radius: 10px;
+}
+
+.frame-corner.tr {
+    top: 0;
+    right: 0;
+    border-left: none;
+    border-bottom: none;
+    border-top-right-radius: 10px;
+}
+
+.frame-corner.bl {
+    bottom: 0;
+    left: 0;
+    border-right: none;
+    border-top: none;
+    border-bottom-left-radius: 10px;
+}
+
+.frame-corner.br {
+    bottom: 0;
+    right: 0;
+    border-left: none;
+    border-top: none;
+    border-bottom-right-radius: 10px;
+}
+
+/* Canvas styling */
+#game-canvas {
+    display: block;
+    border: 4px solid var(--neon-cyan);
+    box-shadow: 
+        var(--glow-cyan),
+        inset 0 0 30px rgba(0, 0, 0, 0.8);
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    border-radius: 5px;
+    position: relative;
+    z-index: 1;
+}
+
+/* Screen glare effect */
+.screen-glare {
+    position: absolute;
+    top: 15px;
+    left: 15px;
+    right: 15px;
+    bottom: 15px;
+    background: linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.1) 0%,
+        transparent 50%
+    );
+    pointer-events: none;
+    border-radius: 5px;
+    z-index: 2;
+}
+
+/* ============================================
+   COMPACT INSTRUCTIONS
+   ============================================ */
+
+#instructions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 20px;
+    background: var(--panel-bg);
+    border: 2px solid var(--neon-yellow);
+    border-radius: 8px;
+    box-shadow: var(--glow-yellow);
+    font-size: 11px;
+    color: var(--neon-cyan);
+}
+
+.key-icon {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--neon-magenta);
+    text-shadow: var(--glow-magenta);
+    padding: 4px 8px;
+    background: rgba(0, 0, 0, 0.6);
+    border: 2px solid var(--neon-magenta);
+    border-radius: 4px;
+}
+
+.divider {
+    color: var(--neon-yellow);
+    opacity: 0.5;
+}
+
+/* ============================================
+   RESPONSIVE DESIGN
+   ============================================ */
+
+@media (max-width: 900px) {
+    #game-container {
+        padding: 10px;
+        gap: 6px;
+    }
+    
+    .glitch-text {
+        font-size: 20px;
+        letter-spacing: 4px;
+    }
+    
+    #hud {
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+    
+    .hud-section {
+        flex: 1 1 calc(33.333% - 6px);
+        min-width: 80px;
+    }
+    
+    #instructions {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 8px;
+        font-size: 10px;
+    }
+}
+
+@media (max-width: 500px) {
+    .glitch-text {
+        font-size: 18px;
+    }
+    
+    .hud-value {
+        font-size: 16px;
+    }
+}
