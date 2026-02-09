@@ -25,7 +25,7 @@ if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
     config.baseSpeed *= 0.45;
     config.baseGravity *= 0.45;
     config.baseThrust *= 0.45;
-    config.enemySpeedMultiplier *= 0.4;
+    config.enemySpeedMultiplier *= 0.7;
 }
 
 
@@ -698,7 +698,7 @@ function draw() {
 if (t.type === 'door') { 
         ctx.save();
         // Se la porta è aperta, la rendiamo semi-trasparente (0.3)
-        if (t.open) ctx.globalAlpha = 0.3; 
+        if (t.open) ctx.globalAlpha = 0.0; 
         
         // Usiamo la funzione drawImg esistente per disegnare la sprite 'door'
         drawImg(sprites.door, t.x, t.y, t.w/config.tileSize, t.h/config.tileSize);
