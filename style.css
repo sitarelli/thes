@@ -108,10 +108,15 @@ body {
     justify-content: center;
     align-items: center;
     cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
 }
 
 .tap-overlay.show {
     display: flex !important;
+    opacity: 1 !important;
+    pointer-events: all !important;
 }
 
 .tap-content {
@@ -190,6 +195,17 @@ body {
     color: var(--neon-yellow);
     opacity: 0.6;
     letter-spacing: 2px;
+}
+
+.tap-debug {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--neon-cyan);
+    opacity: 0.4;
+    letter-spacing: 1px;
+    margin-top: 20px;
+    max-width: 90%;
+    word-wrap: break-word;
 }
 
 @media (max-width: 900px) {

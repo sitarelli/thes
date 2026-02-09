@@ -874,32 +874,56 @@ function isIOS() {
     return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 }
 
-// Funzione per attivare fullscreen (con gestione iOS)
+// Funzione per attivare fullscreen (con gestione iOS e Android)
 function requestFullscreen() {
+    console.log('Requesting fullscreen...');
     const elem = document.documentElement;
     
     if (isIOS()) {
+        console.log('iOS detected - using scroll method');
         // iOS non supporta fullscreen API completa, ma possiamo nascondere la barra
         // Forza scroll per nascondere la barra degli indirizzi
         window.scrollTo(0, 1);
         
         // Tenta comunque webkitEnterFullscreen se disponibile
         if (elem.webkitRequestFullscreen) {
-            elem.webkitRequestFullscreen().catch(() => {
+            elem.webkitRequestFullscreen().catch((err) => {
+                console.log('iOS fullscreen failed:', err);
                 // Fallback: almeno nascondiamo la barra con scroll
                 window.scrollTo(0, 1);
             });
         }
     } else {
         // Android e altri dispositivi
-        if (elem.requestFullscreen) {
-            elem.requestFullscreen().catch(() => console.log('Fullscreen non disponibile'));
-        } else if (elem.webkitRequestFullscreen) {
-            elem.webkitRequestFullscreen().catch(() => console.log('Fullscreen non disponibile'));
-        } else if (elem.mozRequestFullScreen) {
-            elem.mozRequestFullScreen().catch(() => console.log('Fullscreen non disponibile'));
-        } else if (elem.msRequestFullscreen) {
-            elem.msRequestFullscreen().catch(() => console.log('Fullscreen non disponibile'));
+        console.log('Android/Desktop detected - using fullscreen API');
+        
+        const fullscreenPromise = elem.requestFullscreen ? elem.requestFullscreen() :
+                                  elem.webkitRequestFullscreen ? elem.webkitRequestFullscreen() :
+                                  elem.mozRequestFullScreen ? elem.mozRequestFullScreen() :
+                                  elem.msRequestFullscreen ? elem.msRequestFullscreen() : null;
+        
+        if (fullscreenPromise) {
+            fullscreenPromise
+                .then(() => {
+                    console.log('Fullscreen activated successfully');
+                })
+                .catch((err) => {
+                    console.log('Fullscreen request failed:', err);
+                    console.log('Trying alternative method...');
+                    
+                    // Fallback per Android - prova metodi alternativi
+                    try {
+                        if (elem.webkitRequestFullscreen) {
+                            elem.webkitRequestFullscreen();
+                        } else if (document.body.webkitRequestFullscreen) {
+                            document.body.webkitRequestFullscreen();
+                        }
+                    } catch (e) {
+                        console.log('All fullscreen methods failed:', e);
+                    }
+                });
+        } else {
+            console.log('No fullscreen API available');
         }
     }
 }
@@ -908,32 +932,100 @@ function requestFullscreen() {
 let fullscreenActivated = false;
 const tapOverlay = document.getElementById('tap-to-start');
 
+// Funzione per avviare il gioco dopo il tap
+function startGame() {
+    console.log('Starting game...');
+    
+    // Resume audio context
+    if (audioCtx.state === 'suspended') {
+        audioCtx.resume().then(() => {
+            console.log('Audio context resumed');
+        }).catch((err) => {
+            console.log('Audio resume failed:', err);
+        });
+    }
+    
+    // Nascondi overlay prima del fullscreen
+    if (tapOverlay) {
+        tapOverlay.classList.remove('show');
+        // Dopo la transizione, nascondi completamente
+        setTimeout(() => {
+            tapOverlay.style.display = 'none';
+        }, 300);
+        console.log('Overlay hidden');
+    }
+    
+    // Assicurati che il game container sia visibile
+    const gameContainer = document.getElementById('game-container');
+    if (gameContainer) {
+        gameContainer.style.display = 'flex';
+        console.log('Game container visible');
+    }
+    
+    // Attiva fullscreen dopo un piccolo delay
+    setTimeout(() => {
+        requestFullscreen();
+    }, 100);
+    
+    fullscreenActivated = true;
+    
+    // Per iOS, forza scroll
+    if (isIOS()) {
+        setTimeout(() => {
+            window.scrollTo(0, 1);
+        }, 200);
+    }
+    
+    // Debug: verifica che il canvas sia visibile
+    setTimeout(() => {
+        const canvasVisible = canvas && canvas.offsetParent !== null;
+        console.log('Canvas visible:', canvasVisible);
+        console.log('Game running:', gameRunning);
+    }, 500);
+    
+    console.log('Game start sequence completed');
+}
+
 // Mostra overlay su mobile all'avvio
 if (isMobileDevice() && tapOverlay) {
+    // Mostra overlay
     tapOverlay.classList.add('show');
+    console.log('Mobile device detected, showing tap overlay');
     
-    // Gestione tocco/click sull'overlay
-    tapOverlay.addEventListener('click', function() {
-        if (audioCtx.state === 'suspended') audioCtx.resume();
+    // Mostra info debug
+    const debugInfo = document.getElementById('debug-info');
+    if (debugInfo) {
+        const ua = navigator.userAgent;
+        let browserInfo = 'Unknown';
+        if (ua.includes('Chrome')) browserInfo = 'Chrome';
+        else if (ua.includes('Safari')) browserInfo = 'Safari';
+        else if (ua.includes('Firefox')) browserInfo = 'Firefox';
+        else if (ua.includes('SamsungBrowser')) browserInfo = 'Samsung Internet';
         
-        // Attiva fullscreen
-        requestFullscreen();
-        
-        // Nascondi overlay
-        tapOverlay.classList.remove('show');
-        fullscreenActivated = true;
-        
-        // Per iOS, forza scroll dopo un breve delay
-        if (isIOS()) {
-            setTimeout(() => {
-                window.scrollTo(0, 1);
-            }, 100);
-        }
-    });
+        debugInfo.textContent = `${browserInfo} | ${isIOS() ? 'iOS' : 'Android'}`;
+        console.log('Browser:', browserInfo);
+    }
     
-    tapOverlay.addEventListener('touchstart', function(e) {
+    // Gestione tocco sull'overlay
+    tapOverlay.addEventListener('touchend', function(e) {
         e.preventDefault();
+        e.stopPropagation();
+        console.log('Tap detected on overlay (touchend)');
+        startGame();
+    }, { passive: false });
+    
+    // Gestione click sull'overlay (per desktop testing)
+    tapOverlay.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log('Click detected on overlay');
+        startGame();
     });
+    
+    // Fallback con touchstart per dispositivi che non triggherano touchend
+    tapOverlay.addEventListener('touchstart', function(e) {
+        console.log('Touchstart detected');
+    }, { passive: true });
 }
 
 // Touch Controls Setup
