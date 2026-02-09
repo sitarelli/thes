@@ -7,10 +7,10 @@ const config = {
     viewportHeight: 510,
     // DINAMICHE "GOOD GAME" RIPRISTINATE
     baseGravity: 0.002,    
-    baseSpeed: 0.15,       
+    baseSpeed: 0.09,       
     baseThrust: -0.009,    
-    maxFallSpeed: 0.10,     
-    maxFlySpeed: -0.10,     
+    maxFallSpeed: 0.07,     
+    maxFlySpeed: -0.08,     
     enemySpeedMultiplier: 0.08, 
     zoom: 1, 
     tileSize: 0,
@@ -106,8 +106,7 @@ let gameRunning = false;
 // Controllo frame rate per normalizzare la velocità su tutti i dispositivi
 let lastTime = 0;
 const targetFPS = 60;
-const gameSpeed = 1.5; // MODIFICA QUESTO VALORE: 1.0 = normale, 1.5 = più veloce, 0.8 = più lento
-const frameTime = 1000 / (targetFPS * gameSpeed);
+const targetFrameTime = 1000 / targetFPS; // Tempo target per frame (16.67ms a 60fps)
 
 // Particelle per effetti lava
 let lavaParticles = [];
@@ -320,28 +319,31 @@ function createLavaParticles(lava) {
     }
 }
 
-function updateLavaParticles() {
+function updateLavaParticles(deltaMultiplier = 1) {
     lavaParticles = lavaParticles.filter(p => p.life > 0);
     lavaParticles.forEach(p => {
-        p.x += p.vx;
-        p.y += p.vy;
-        p.vy -= 0.01;
-        p.life -= 0.015;
+        p.x += p.vx * deltaMultiplier;
+        p.y += p.vy * deltaMultiplier;
+        p.vy -= 0.01 * deltaMultiplier;
+        p.life -= 0.015 * deltaMultiplier;
         if (p.type === 'smoke') {
-            p.size += 0.1;
-            p.vx *= 0.98;
+            p.size += 0.1 * deltaMultiplier;
+            p.vx *= Math.pow(0.98, deltaMultiplier);
         }
     });
 }
 
-function update() {
+function update(deltaMultiplier) {
     if (gameState.gameOver) return;
     if (gameState.won) {
         gameState.victoryTime++;
         return;
     }
     
-    const speed = config.baseSpeed * config.tileSize, grav = config.baseGravity * config.tileSize, thr = config.baseThrust * config.tileSize;
+    // Usa deltaMultiplier per normalizzare la velocità
+    const speed = config.baseSpeed * config.tileSize * deltaMultiplier;
+    const grav = config.baseGravity * config.tileSize * deltaMultiplier;
+    const thr = config.baseThrust * config.tileSize * deltaMultiplier;
     
     if (keys.right) { player.vx = speed; player.facing = 1; } 
     else if (keys.left) { player.vx = -speed; player.facing = -1; } 
@@ -400,8 +402,8 @@ if (!gameState.won && !gameState.gameOver) {
         createLavaParticles(l);
     }
     
-    lavaAnimTime.value += 0.05;
-    updateLavaParticles();
+    lavaAnimTime.value += 0.05 * deltaMultiplier;
+    updateLavaParticles(deltaMultiplier);
     
     enemies.forEach(en => {
         en.x += en.vx; en.y += en.vy;
@@ -544,21 +546,24 @@ function drawLavaParticles() {
         ctx.save();
         ctx.globalAlpha = p.life;
         
+        // Protezione: assicurati che p.size sia valido
+        const particleSize = isFinite(p.size) && p.size > 0 ? p.size : 3;
+        
         if (p.type === 'fire') {
-            const gradient = ctx.createRadialGradient(px, py, 0, px, py, p.size);
+            const gradient = ctx.createRadialGradient(px, py, 0, px, py, particleSize);
             gradient.addColorStop(0, '#ffff00');
             gradient.addColorStop(0.5, '#ff6600');
             gradient.addColorStop(1, 'rgba(255, 0, 0, 0)');
             ctx.fillStyle = gradient;
         } else {
-            const gradient = ctx.createRadialGradient(px, py, 0, px, py, p.size);
+            const gradient = ctx.createRadialGradient(px, py, 0, px, py, particleSize);
             gradient.addColorStop(0, 'rgba(100, 100, 100, 0.8)');
             gradient.addColorStop(1, 'rgba(50, 50, 50, 0)');
             ctx.fillStyle = gradient;
         }
         
         ctx.beginPath();
-        ctx.arc(px, py, p.size, 0, Math.PI * 2);
+        ctx.arc(px, py, particleSize, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
     });
@@ -817,17 +822,26 @@ window.addEventListener('keyup', e => {
 function loop(currentTime) { 
     if (!lastTime) lastTime = currentTime;
     const deltaTime = currentTime - lastTime;
+    lastTime = currentTime;
     
-    // Esegui update solo se è passato abbastanza tempo (frame limiting)
-    if (deltaTime >= frameTime) {
-        if(gameRunning) update();
-        draw();
-        lastTime = currentTime - (deltaTime % frameTime); // Mantieni sincronizzazione
+    // Calcola il moltiplicatore basato sul tempo reale trascorso
+    // Normalizzato a 60fps (16.67ms per frame)
+    let deltaMultiplier = deltaTime / targetFrameTime;
+    
+    // Validazione: assicurati che sia un numero valido e ragionevole
+    if (!isFinite(deltaMultiplier) || deltaMultiplier <= 0 || deltaMultiplier > 5) {
+        deltaMultiplier = 1; // Fallback a velocità normale
     }
+    
+    // Ulteriore limitazione per evitare salti enormi
+    const clampedDelta = Math.min(Math.max(deltaMultiplier, 0.1), 2);
+    
+    if(gameRunning) update(clampedDelta);
+    draw();
     
     requestAnimationFrame(loop);
 }
-loop(0);
+loop(performance.now());
 
 function showRetryButton() {
     // Rimuoviamo se esiste già
