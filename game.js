@@ -694,17 +694,18 @@ function draw() {
     
     drawLavaParticles();
     
-  triggers.forEach(t => { 
-if (t.type === 'door') { 
-        ctx.save();
-        // Se la porta è aperta, la rendiamo semi-trasparente (0.3)
-        if (t.open) ctx.globalAlpha = 0.0; 
-        
-        // Usiamo la funzione drawImg esistente per disegnare la sprite 'door'
-        drawImg(sprites.door, t.x, t.y, t.w/config.tileSize, t.h/config.tileSize);
-        
-        ctx.restore();
-    }
+triggers.forEach(t => {
+        if (t.type === 'door') {
+            // Se la porta è chiusa (!t.open), la disegniamo.
+            // Se è aperta, non facciamo nulla (quindi sparisce del tutto).
+            if (!t.open) {
+                drawImg(sprites.door, t.x, t.y, t.w/config.tileSize, t.h/config.tileSize);
+            }
+        }
+// ...
+
+
+
     if(t.type==='open') {
         // Forza sempre la scritta OPEN
         drawGlowingTrigger(t.x, t.y, t.w, t.h, '#00ffff', 'OPEN', 0);
