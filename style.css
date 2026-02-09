@@ -400,7 +400,7 @@ body {
 .controls-left,
 .controls-right {
     position: absolute;
-    top: 50%;                    /* NUOVO: Posiziona a metà altezza */
+    top: 70%;                    /* NUOVO: Posiziona a metà altezza */
     transform: translateY(-50%); /* NUOVO: Centra perfettamente */
     display: flex;
     gap: 15px;
