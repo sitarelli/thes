@@ -2,7 +2,12 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-fullscreen">
+    <meta name="screen-orientation" content="landscape">
+    <meta name="orientation" content="landscape">
     <title>THESEUS // ARCADE SYSTEM</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -10,69 +15,76 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <!-- Overlay per rotazione schermo -->
+    <div id="rotate-message" class="rotate-overlay">
+        <div class="rotate-content">
+            <div class="rotate-icon">📱</div>
+            <p>Ruota il dispositivo in orizzontale</p>
+        </div>
+    </div>
+
     <!-- Main game container -->
     <div id="game-container">
         
-        <!-- Compact header -->
-        <div class="arcade-header">
-            <div class="title-section">
-                <div class="glitch-text">THESEUS an MSX VittoGol Revival</div>
-            </div>
-        </div>
-
-        <!-- Compact HUD Display -->
-        <div id="hud">
-            <div class="hud-section">
-                <div class="hud-label">LEVEL</div>
-                <div class="hud-value" id="level-display">01</div>
-            </div>
+        <!-- Header compatto con HUD integrato -->
+        <div class="compact-header">
+            <div class="title-compact">THESEUS</div>
             
-            <div class="hud-section pulse">
-                <div class="hud-label">VITE</div>
-                <div class="hud-value hearts" id="lives-display">♥♥♥</div>
-            </div>
-            
-            <div class="hud-section">
-                <div class="hud-label">★</div>
-                <div class="hud-value" id="stars-display">0</div>
-            </div>
-            
-            <div class="hud-section">
-                <div class="hud-label">⚑</div>
-                <div class="hud-value" id="flags-display">0</div>
-            </div>
-            
-            <div class="hud-section">
-                <div class="hud-label">💡</div>
-                <div class="hud-value" id="bulbs-display">0</div>
-            </div>
-            
-            <div class="hud-section key-section">
-                <div class="hud-label">🔑</div>
-                <div class="hud-value" id="key-display">
-                    <span class="key-indicator">●</span>
+            <div id="hud-compact">
+                <div class="hud-item">
+                    <span class="hud-label">LV</span>
+                    <span class="hud-value" id="level-display">01</span>
+                </div>
+                
+                <div class="hud-item pulse">
+                    <span class="hud-label hearts" id="lives-display">♥♥♥</span>
+                </div>
+                
+                <div class="hud-item">
+                    <span class="hud-icon">★</span>
+                    <span class="hud-value" id="stars-display">0</span>
+                </div>
+                
+                <div class="hud-item">
+                    <span class="hud-icon">⚑</span>
+                    <span class="hud-value" id="flags-display">0</span>
+                </div>
+                
+                <div class="hud-item">
+                    <span class="hud-icon">💡</span>
+                    <span class="hud-value" id="bulbs-display">0</span>
+                </div>
+                
+                <div class="hud-item">
+                    <span class="hud-icon">🔑</span>
+                    <span class="key-indicator">◯</span>
                 </div>
             </div>
         </div>
 
-        <!-- Game canvas with arcade frame -->
-        <div class="arcade-frame">
-            <div class="frame-corner tl"></div>
-            <div class="frame-corner tr"></div>
-            <div class="frame-corner bl"></div>
-            <div class="frame-corner br"></div>
-            
+        <!-- Game canvas wrapper -->
+        <div class="game-wrapper">
             <canvas id="game-canvas"></canvas>
-            
-            <!-- Screen glare effect -->
-            <div class="screen-glare"></div>
         </div>
 
-        <!-- Compact instructions -->
-        <div id="instructions">
-            <span class="key-icon">◄►</span> MOVIMENTO
-            <span class="divider">|</span>
-            <span class="key-icon">SPACE</span> VOLA
+        <!-- Controlli Touch per Mobile -->
+        <div id="touch-controls">
+            <!-- Frecce di movimento a sinistra -->
+            <div class="controls-left">
+                <button id="btn-left" class="touch-btn arrow-btn">
+                    <span class="arrow-icon">◄</span>
+                </button>
+                <button id="btn-right" class="touch-btn arrow-btn">
+                    <span class="arrow-icon">►</span>
+                </button>
+            </div>
+            
+            <!-- Pulsante FLY a destra -->
+            <div class="controls-right">
+                <button id="btn-fly" class="touch-btn fly-btn">
+                    <span class="fly-icon">FLY</span>
+                </button>
+            </div>
         </div>
     </div>
 

@@ -859,3 +859,125 @@ function restartGame() {
     // Ricarica il primo livello
     loadLevelScript(1);
 }
+
+// ============================================
+// TOUCH CONTROLS & FULLSCREEN SUPPORT
+// ============================================
+
+// Funzione per attivare fullscreen su mobile
+function requestFullscreen() {
+    const elem = document.documentElement;
+    if (elem.requestFullscreen) {
+        elem.requestFullscreen();
+    } else if (elem.webkitRequestFullscreen) {
+        elem.webkitRequestFullscreen();
+    } else if (elem.mozRequestFullScreen) {
+        elem.mozRequestFullScreen();
+    } else if (elem.msRequestFullscreen) {
+        elem.msRequestFullscreen();
+    }
+}
+
+// Controlla se è un dispositivo mobile
+function isMobileDevice() {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+}
+
+// Attiva fullscreen al primo tocco/click su mobile
+let fullscreenActivated = false;
+function activateFullscreenOnce() {
+    if (!fullscreenActivated && isMobileDevice()) {
+        requestFullscreen();
+        fullscreenActivated = true;
+    }
+}
+
+// Touch Controls Setup
+const touchButtons = {
+    left: document.getElementById('btn-left'),
+    right: document.getElementById('btn-right'),
+    fly: document.getElementById('btn-fly')
+};
+
+// Previeni comportamento di default per tutti i pulsanti touch
+Object.values(touchButtons).forEach(btn => {
+    if (btn) {
+        btn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            activateFullscreenOnce();
+        });
+        btn.addEventListener('touchend', (e) => e.preventDefault());
+        btn.addEventListener('touchcancel', (e) => e.preventDefault());
+    }
+});
+
+// LEFT button
+if (touchButtons.left) {
+    touchButtons.left.addEventListener('touchstart', () => {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        keys.left = true;
+    });
+    
+    touchButtons.left.addEventListener('touchend', () => {
+        keys.left = false;
+    });
+    
+    touchButtons.left.addEventListener('touchcancel', () => {
+        keys.left = false;
+    });
+}
+
+// RIGHT button
+if (touchButtons.right) {
+    touchButtons.right.addEventListener('touchstart', () => {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        keys.right = true;
+    });
+    
+    touchButtons.right.addEventListener('touchend', () => {
+        keys.right = false;
+    });
+    
+    touchButtons.right.addEventListener('touchcancel', () => {
+        keys.right = false;
+    });
+}
+
+// FLY button (equivalente a SPACE)
+if (touchButtons.fly) {
+    touchButtons.fly.addEventListener('touchstart', () => {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        keys.up = true;
+    });
+    
+    touchButtons.fly.addEventListener('touchend', () => {
+        keys.up = false;
+    });
+    
+    touchButtons.fly.addEventListener('touchcancel', () => {
+        keys.up = false;
+    });
+}
+
+// Attiva fullscreen anche al primo click/touch sul canvas
+canvas.addEventListener('click', activateFullscreenOnce, { once: true });
+canvas.addEventListener('touchstart', activateFullscreenOnce, { once: true });
+
+// Gestione orientamento schermo
+function checkOrientation() {
+    const rotateMsg = document.getElementById('rotate-message');
+    if (rotateMsg && window.innerWidth < 900) {
+        if (window.innerHeight > window.innerWidth) {
+            // Portrait mode - mostra messaggio
+            rotateMsg.style.display = 'flex';
+        } else {
+            // Landscape mode - nascondi messaggio
+            rotateMsg.style.display = 'none';
+        }
+    }
+}
+
+// Controlla orientamento all'avvio e quando cambia
+window.addEventListener('load', checkOrientation);
+window.addEventListener('resize', checkOrientation);
+window.addEventListener('orientationchange', checkOrientation);
