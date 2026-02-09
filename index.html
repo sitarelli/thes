@@ -2,13 +2,10 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, minimal-ui">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, minimal-ui, viewport-fit=cover">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="THESEUS">
-    <meta name="screen-orientation" content="landscape">
-    <meta name="orientation" content="landscape">
     <meta name="theme-color" content="#000000">
     <title>THESEUS // ARCADE SYSTEM</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -17,7 +14,6 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- Overlay per rotazione schermo -->
     <div id="rotate-message" class="rotate-overlay">
         <div class="rotate-content">
             <div class="rotate-icon">📱</div>
@@ -25,131 +21,62 @@
         </div>
     </div>
 
-    <!-- Overlay "Tap to Start" per attivare fullscreen -->
     <div id="tap-to-start" class="tap-overlay">
         <div class="tap-content">
             <div class="tap-title">THESEUS</div>
             <div class="tap-subtitle">MSX VittoGol Revival</div>
             <div class="tap-icon">👆</div>
             <div class="tap-button">TAP TO START</div>
-            <div class="tap-hint">Il gioco andrà a schermo intero</div>
+            <div class="tap-hint">Fullscreen Mode Ready</div>
             <div class="tap-debug" id="debug-info"></div>
         </div>
     </div>
 
-    <!-- Main game container -->
     <div id="game-container">
         
-        <!-- Header compatto con HUD integrato -->
         <div class="compact-header">
             <div class="title-compact">THESEUS</div>
-            
             <div id="hud-compact">
-                <div class="hud-item">
-                    <span class="hud-label">LV</span>
-                    <span class="hud-value" id="level-display">01</span>
-                </div>
-                
-                <div class="hud-item pulse">
-                    <span class="hud-label hearts" id="lives-display">♥♥♥</span>
-                </div>
-                
-                <div class="hud-item">
-                    <span class="hud-icon">★</span>
-                    <span class="hud-value" id="stars-display">0</span>
-                </div>
-                
-                <div class="hud-item">
-                    <span class="hud-icon">⚑</span>
-                    <span class="hud-value" id="flags-display">0</span>
-                </div>
-                
-                <div class="hud-item">
-                    <span class="hud-icon">💡</span>
-                    <span class="hud-value" id="bulbs-display">0</span>
-                </div>
-                
-                <div class="hud-item">
-                    <span class="hud-icon">🔑</span>
-                    <span class="key-indicator">◯</span>
-                </div>
+                <div class="hud-item"><span class="hud-label">LV</span><span class="hud-value" id="level-display">01</span></div>
+                <div class="hud-item pulse"><span class="hud-label hearts" id="lives-display">♥♥♥</span></div>
+                <div class="hud-item"><span class="hud-icon">★</span><span class="hud-value" id="stars-display">0</span></div>
+                <div class="hud-item"><span class="hud-icon">⚑</span><span class="hud-value" id="flags-display">0</span></div>
+                <div class="hud-item"><span class="hud-icon">💡</span><span class="hud-value" id="bulbs-display">0</span></div>
+                <div class="hud-item"><span class="hud-icon">🔑</span><span class="key-indicator">◯</span></div>
             </div>
         </div>
 
-        <!-- Game canvas wrapper -->
         <div class="game-wrapper">
             <canvas id="game-canvas"></canvas>
-        </div>
-
-        <!-- Controlli Touch per Mobile -->
-        <div id="touch-controls">
-            <!-- Frecce di movimento a sinistra -->
-            <div class="controls-left">
-                <button id="btn-left" class="touch-btn arrow-btn">
-                    <span class="arrow-icon">◄</span>
-                </button>
-                <button id="btn-right" class="touch-btn arrow-btn">
-                    <span class="arrow-icon">►</span>
-                </button>
-            </div>
             
-            <!-- Pulsante FLY a destra -->
-            <div class="controls-right">
-                <button id="btn-fly" class="touch-btn fly-btn">
-                    <span class="fly-icon">FLY</span>
-                </button>
+            <div id="touch-controls">
+                <div class="controls-left">
+                    <button id="btn-left" class="touch-btn arrow-btn"><span class="arrow-icon">◄</span></button>
+                    <button id="btn-right" class="touch-btn arrow-btn"><span class="arrow-icon">►</span></button>
+                </div>
+                <div class="controls-right">
+                    <button id="btn-fly" class="touch-btn fly-btn"><span class="fly-icon">FLY</span></button>
+                </div>
             </div>
         </div>
     </div>
 
-<script>
-document.getElementById('tap-to-start').addEventListener('click', function() {
-    const elem = document.documentElement; // Seleziona tutta la pagina
-
-    // Logica Fullscreen cross-browser (presa dal tuo file funziona.html)
-    if (elem.requestFullscreen) {
-        elem.requestFullscreen();
-    } else if (elem.webkitRequestFullscreen) { /* Safari / iOS */
-        elem.webkitRequestFullscreen();
-    } else if (elem.msRequestFullscreen) { /* IE11 */
-        elem.msRequestFullscreen();
-    }
-
-    // Nascondi l'overlay dopo il click
-    this.style.display = 'none';
-    
-    // Opzionale: se il gioco deve partire ufficialmente ora, 
-    // puoi chiamare una funzione di game.js qui
-    if (typeof startGame === "function") {
-        startGame();
-    }
-});
-</script>
-
     <script src="game.js"></script>
 
-
-
-<script>
-    const tastoStart = document.getElementById('tap-to-start');
-    
-    // Mostriamo la schermata di avvio
-    tastoStart.classList.add('show');
-
-    tastoStart.addEventListener('click', function() {
-        // Questa è la magia che attiva il fullscreen (come in funziona.html)
-        const docEl = document.documentElement;
-        if (docEl.requestFullscreen) {
-            docEl.requestFullscreen();
-        } else if (docEl.webkitRequestFullscreen) {
-            docEl.webkitRequestFullscreen(); // Per iPhone/Safari
-        }
-
-        // Una volta attivato il fullscreen, nascondiamo la schermata Start
-        tastoStart.classList.remove('show');
-        tastoStart.style.display = 'none';
-    });
-</script>
-
+    <script>
+        const tastoStart = document.getElementById('tap-to-start');
+        tastoStart.classList.add('show');
+        
+        tastoStart.addEventListener('click', function() {
+            const docEl = document.documentElement;
+            if (docEl.requestFullscreen) docEl.requestFullscreen();
+            else if (docEl.webkitRequestFullscreen) docEl.webkitRequestFullscreen();
+            
+            tastoStart.classList.remove('show');
+            setTimeout(() => { tastoStart.style.display = 'none'; }, 300);
+            
+            if (typeof startGame === "function") startGame();
+        });
+    </script>
 </body>
 </html>
