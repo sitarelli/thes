@@ -182,7 +182,7 @@ function initGame(levelData) {
     
     currentMap = JSON.parse(JSON.stringify(levelData.map));
     config.tileSize = levelData.tileSize || 20;
-    config.zoom = config.viewportHeight / (16 * config.tileSize);
+    config.zoom = config.viewportHeight / (20 * config.tileSize);
     
     items = []; enemies = []; triggers = []; decorations = []; lavas = [];
     lavaParticles = [];
