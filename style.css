@@ -243,8 +243,8 @@ body {
     font-family: 'Orbitron', sans-serif;
 }
 
-/* mostra controlli su mobile landscape */
-@media (max-width: 900px) and (orientation: landscape) {
+/* MOSTRA CONTROLLI SU MOBILE E TABLET (LANDSCAPE) */
+@media (max-width: 1366px) and (orientation: landscape), (pointer: coarse) {
     #touch-controls { display: block; }
 }
 
