@@ -6,12 +6,12 @@ const config = {
     viewportWidth: 740,
     viewportHeight: 510,
     // VELOCITÀ RICALIBRATE PER FIXED TIME STEP (1/60)
-    baseGravity: 0.12,          // Prima era 0.002
-    baseSpeed: 8.4,             // Prima era 0.09
-    baseThrust: -0.34,          // Prima era -0.009
-    maxFallSpeed: 4.2,          // Prima era 0.07
-    maxFlySpeed: -0.13,          // Prima era -0.08
-    enemySpeedMultiplier: 0.13,  // Prima era 0.08
+    baseGravity: 0.15,          // Prima era 0.002
+    baseSpeed: 9.0,             // Prima era 0.09
+    baseThrust: -0.40,          // Prima era -0.009
+    maxFallSpeed: 4.6,          // Prima era 0.07
+    maxFlySpeed: -0.16,          // Prima era -0.08
+    enemySpeedMultiplier: 0.14,  // Prima era 0.08
     zoom: 1, 
     tileSize: 0,
     hitboxMargin: 0.25,
