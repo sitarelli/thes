@@ -5,28 +5,18 @@
 const config = {
     viewportWidth: 740,
     viewportHeight: 510,
-    // DINAMICHE "GOOD GAME" RIPRISTINATE
-    baseGravity: 0.002,    
-    baseSpeed: 0.09,       
-    baseThrust: -0.009,    
-    maxFallSpeed: 0.07,     
-    maxFlySpeed: -0.08,     
-    enemySpeedMultiplier: 0.08, 
+    // VELOCITÀ RICALIBRATE PER FIXED TIME STEP (1/60)
+    baseGravity: 0.12,          // Prima era 0.002
+    baseSpeed: 8.4,             // Prima era 0.09
+    baseThrust: -0.34,          // Prima era -0.009
+    maxFallSpeed: 4.2,          // Prima era 0.07
+    maxFlySpeed: -0.13,          // Prima era -0.08
+    enemySpeedMultiplier: 0.13,  // Prima era 0.08
     zoom: 1, 
     tileSize: 0,
-    // HITBOX (Tolleranza invisibile per i nemici: 25%)
-    hitboxMargin: 0.25 
+    hitboxMargin: 0.25,
+    fixedTimeStep: 1/60
 };
-
-// ----------------------------------
-// FIX VELOCITÀ ANDROID / MOBILE
-// ----------------------------------
-if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
-    config.baseSpeed *= 0.60;
-    config.baseGravity *= 0.30;
-    config.baseThrust *= 0.30;
-    config.enemySpeedMultiplier *= 0.3;
-}
 
 
 
@@ -117,8 +107,7 @@ let gameRunning = false;
 
 // Controllo frame rate per normalizzare la velocità su tutti i dispositivi
 let lastTime = 0;
-const targetFPS = 60;
-const targetFrameTime = 1000 / targetFPS; // Tempo target per frame (16.67ms a 60fps)
+let accumulator = 0; // Accumulatore per Fixed Time Step
 
 // Particelle per effetti lava
 let lavaParticles = [];
@@ -201,19 +190,30 @@ function loadLevelScript(n) {
     document.body.appendChild(s);
 }
 
+
+
+
 function initGame(levelData) {
     if (!levelData) return;
+    
+    // Reset stato gioco
     gameState.hasKey = false; 
     gameState.doorOpen = false; 
     gameState.won = false;
     gameState.victoryTime = 0;
+    
+    // Parsing mappa
     currentMap = JSON.parse(JSON.stringify(levelData.map));
     config.tileSize = levelData.tileSize || 20;
     config.zoom = config.viewportHeight / (16 * config.tileSize);
+    
+    // Reset array entità
     items = []; enemies = []; triggers = []; decorations = []; lavas = [];
     lavaParticles = [];
 
     const rows = currentMap.length, cols = currentMap[0].length;
+    
+    // Ciclo di costruzione livello
     for (let y = 0; y < rows; y++) {
         for (let x = 0; x < cols; x++) {
             const cell = currentMap[y][x];
@@ -221,6 +221,8 @@ function initGame(levelData) {
             const group = (typeof cell === 'object') ? cell.group : null;
             
             if (type === 0 || type === 1) continue;
+            
+            // Logica raggruppamento celle
             let w = 1, h = 1;
             while (x + w < cols) {
                 const nextCell = currentMap[y][x + w];
@@ -239,8 +241,10 @@ function initGame(levelData) {
                 }
                 if (canDown) h++;
             }
+            
             const pxW = w * config.tileSize, pxH = h * config.tileSize, pxX = x * config.tileSize, pxY = y * config.tileSize;
             
+            // Creazione oggetti
             if (type === 9) { player.w = pxW; player.h = pxH; player.startX = pxX; player.startY = pxY; respawnPlayer(); } 
             else if (type === 2) lavas.push({ x: pxX, y: pxY, w: pxW, h: pxH });
             else if (type === 10) items.push({ x: pxX, y: pxY, w: pxW, h: pxH, type: 'key', taken: false });
@@ -257,13 +261,23 @@ function initGame(levelData) {
             else if (type === 15) enemies.push({ x: pxX, y: pxY, w: pxW, h: pxH, vx: config.enemySpeedMultiplier * config.tileSize, vy: 0, type: 'X' });
             else if (type === 16) items.push({ x: pxX, y: pxY, w: pxW, h: pxH, type: 'timer', taken: false });
 
+            // Pulizia mappa
             for (let r = y; r < y + h; r++) for (let c = x; c < x + w; c++) currentMap[r][c] = 0;
         }
     }
-    if(!gameRunning) { gameRunning = true; loop(); }
+
+    // --- FIX IMPORTANTE PER FIXED TIME STEP ---
+    // Resettiamo il tempo per evitare che il gioco cerchi di recuperare 
+    // troppi frame tutti insieme bloccando il browser
+    lastTime = 0;       
+    accumulator = 0;    
+
+    // Avvio sicuro del loop
+    if (!gameRunning) { 
+        gameRunning = true; 
+        requestAnimationFrame(loop); 
+    }
 }
-
-
 function stopAllSounds() {
     Object.values(sfx).forEach(audio => {
         audio.pause();
@@ -345,17 +359,17 @@ function updateLavaParticles(deltaMultiplier = 1) {
     });
 }
 
-function update(deltaMultiplier) {
+function update(dt) {
     if (gameState.gameOver) return;
     if (gameState.won) {
         gameState.victoryTime++;
         return;
     }
     
-    // Usa deltaMultiplier per normalizzare la velocità
-    const speed = config.baseSpeed * config.tileSize * deltaMultiplier;
-    const grav = config.baseGravity * config.tileSize * deltaMultiplier;
-    const thr = config.baseThrust * config.tileSize * deltaMultiplier;
+    // Usa dt (delta time fisso) invece di deltaMultiplier
+    const speed = config.baseSpeed * config.tileSize * dt;
+    const grav = config.baseGravity * config.tileSize * dt;
+    const thr = config.baseThrust * config.tileSize * dt;
     
     if (keys.right) { player.vx = speed; player.facing = 1; } 
     else if (keys.left) { player.vx = -speed; player.facing = -1; } 
@@ -414,8 +428,8 @@ if (!gameState.won && !gameState.gameOver) {
         createLavaParticles(l);
     }
     
-    lavaAnimTime.value += 0.05 * deltaMultiplier;
-    updateLavaParticles(deltaMultiplier);
+    lavaAnimTime.value += 0.05 * dt * 60;
+    updateLavaParticles(dt * 60);
     
     enemies.forEach(en => {
         en.x += en.vx; en.y += en.vy;
@@ -832,29 +846,44 @@ window.addEventListener('keyup', e => {
     if(e.code==='Space') keys.up=false; 
 });
 
-function loop(currentTime) { 
-    if (!lastTime) lastTime = currentTime;
-    const deltaTime = currentTime - lastTime;
-    lastTime = currentTime;
-    
-    // Calcola il moltiplicatore basato sul tempo reale trascorso
-    // Normalizzato a 60fps (16.67ms per frame)
-    let deltaMultiplier = deltaTime / targetFrameTime;
-    
-    // Validazione: assicurati che sia un numero valido e ragionevole
-    if (!isFinite(deltaMultiplier) || deltaMultiplier <= 0 || deltaMultiplier > 5) {
-        deltaMultiplier = 1; // Fallback a velocità normale
+// Assicurati che lastTime sia inizializzato a 0 o null all'inizio del file
+// let lastTime = 0; 
+// let accumulator = 0;
+
+function loop(timestamp) {
+    if (!gameRunning) return;
+
+    // 1. Inizializzazione al primo frame per evitare un delta enorme
+    if (!lastTime) {
+        lastTime = timestamp;
+        requestAnimationFrame(loop);
+        return;
     }
-    
-    // Ulteriore limitazione per evitare salti enormi
-    const clampedDelta = Math.min(Math.max(deltaMultiplier, 0.1), 2);
-    
-    if(gameRunning) update(clampedDelta);
+
+    // 2. Calcolo del Delta Time in SECONDI
+    let deltaTime = (timestamp - lastTime) / 1000;
+    lastTime = timestamp;
+
+    // 3. Prevenzione "Spiral of Death" (se il gioco lagga troppo o cambi scheda, non recuperare più di 0.25 secondi)
+    if (deltaTime > 0.25) deltaTime = 0.25;
+
+    // 4. Aggiungi all'accumulatore
+    accumulator += deltaTime;
+
+    // 5. Consuma l'accumulatore a passi fissi (Fixed Time Step)
+    while (accumulator >= config.fixedTimeStep) {
+        // Passiamo fixedTimeStep all'update (fisica coerente)
+        update(config.fixedTimeStep); 
+        accumulator -= config.fixedTimeStep;
+    }
+
+    // 6. Disegna (passando l'alpha per l'interpolazione, se implementata, altrimenti lascia vuoto)
     draw();
-    
+
     requestAnimationFrame(loop);
 }
-loop(performance.now());
+
+// NON chiamare loop() qui - viene chiamato da initGame()
 
 function showRetryButton() {
     // Rimuoviamo se esiste già
