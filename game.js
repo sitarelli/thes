@@ -435,7 +435,7 @@ if (gameState.gameOver || gameState.won) {
     }
 
     // === POWER EROSION (THESEUS CORE MECHANIC) ===
-    const POWER_DRAIN_PER_SECOND = 0.020; 
+    const POWER_DRAIN_PER_SECOND = 0.015; 
     gameState.power -= POWER_DRAIN_PER_SECOND * dt;
     
     // Controllo morte per erosione naturale
