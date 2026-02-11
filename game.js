@@ -854,16 +854,22 @@ function showRetryButton() {
 function restartGame() {
     const btn = document.getElementById('retry-btn');
     if (btn) btn.remove();
+    
+    // Ripristiniamo lo stato base per riprovare il livello
     gameState.gameOver = false;
     gameState.power = gameState.maxPower; 
-    gameState.stars = 0;
-    gameState.flags = 0;
-    gameState.bulbs = 0;
-    gameState.hasKey = false;
-    currentLevelNumber = 1;
-    loadLevelScript(1);
-}
+    gameState.hasKey = false; // Il giocatore deve ritrovare la chiave del livello
+    
+    // NOTA: Se vuoi che le stelle/bulbi raccolti nei livelli precedenti 
+    // rimangano salvati, commenta le righe qui sotto:
+    // gameState.stars = 0;
+    // gameState.flags = 0;
+    // gameState.bulbs = 0;
 
+    // --- LA MODIFICA CHIAVE ---
+    // Invece di resettare a 1, usiamo il currentLevelNumber attuale
+    loadLevelScript(currentLevelNumber); 
+}
 // --- TOUCH & FULLSCREEN ---
 function isMobileDevice() { return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent); }
 function isIOS() { return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream; }
