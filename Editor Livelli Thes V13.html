@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>Theseus Editor v12 - Compact</title>
+    <style>
+        body { background-color: #1a1a1a; color: #eee; font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; align-items: center; padding: 10px; margin: 0; }
+        h1 { margin: 10px 0; color: #fff; letter-spacing: 2px; font-size: 1.5rem; }
+        
+        /* Toolbar ottimizzata per stare su una riga */
+        .toolbar { 
+            background: #2b2b2b; 
+            padding: 8px; 
+            border-radius: 8px; 
+            margin-bottom: 10px; 
+            display: flex; 
+            flex-wrap: nowrap; /* Impedisce di andare a capo */
+            gap: 10px; 
+            border: 1px solid #444; 
+            max-width: 98vw;
+            overflow-x: auto; /* Scroll orizzontale se serve */
+        }
+        
+        .group { 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            gap: 4px; 
+            border-right: 1px solid #444; 
+            padding: 0 10px; 
+            flex-shrink: 0; /* Impedisce ai gruppi di restringersi troppo */
+        }
+        .group:last-child { border-right: none; }
+        
+        button { padding: 4px 8px; cursor: pointer; background: #444; color: white; border: 1px solid #555; font-size: 10px; border-radius: 4px; min-width: 45px; }
+        button:hover { background: #555; }
+        button.active { border-color: #fff; box-shadow: 0 0 5px rgba(255,255,255,0.8); font-weight: bold; }
+        
+        #btnDraw.active { background: #999; color: #000; }
+        #btnLava.active { background: #d00; }
+        #btnStar.active { background: #ff0; color: #000; }
+        #btnThes.active { background: #00ffff; color: #000; }
+        #btnKey.active { background: #ffd700; color: #000; }
+        #btnEnemyH.active { background: #800080; } 
+        #btnEnemyV.active { background: #4b0082; }
+        #btnEnemyS.active { background: #8b0000; }
+        #btnEnemyX.active { background: #ff1493; }
+        #btnTimer.active { background: #00ff00; color: #000; }
+        #btnEraser.active { background: #fff; color: #000; }
+        
+        input[type="number"] { width: 45px; padding: 2px; background: #222; color: #fff; border: 1px solid #555; font-size: 10px; }
+        input[type="text"] { width: 30px; padding: 2px; background: #222; color: #fff; border: 1px solid #555; text-align: center; text-transform: uppercase; font-size: 10px; }
+        input[type="range"] { width: 80px; }
+        
+        #editor-wrapper { border: 4px solid #333; box-shadow: 0 0 30px rgba(0,0,0,0.8); background-color: #000; position: relative; overflow: hidden; }
+        canvas { display: block; cursor: crosshair; image-rendering: pixelated; }
+        
+        textarea { width: 95%; height: 100px; margin-top: 10px; background: #111; color: #0f0; border: 1px solid #333; padding: 10px; font-family: monospace; font-size: 11px; }
+        
+        .arrow-controls { display: grid; grid-template-columns: 22px 22px 22px; gap: 2px; }
+        .arrow-controls button { min-width: 22px; padding: 2px; }
+        
+        #importFile { display: none; }
+        .info-panel { background: #2b2b2b; padding: 5px 15px; border-radius: 4px; font-size: 10px; color: #aaa; margin-bottom: 5px; }
+        .slider-group { display: flex; flex-direction: column; gap: 2px; align-items: center; }
+        .slider-group label { font-size: 9px; color: #888; }
+        
+        .toggle-container { font-size: 9px; color: #00ff00; display: flex; align-items: center; gap: 3px; margin-top: 2px; cursor: pointer; }
+        .toggle-container input { cursor: pointer; }
+
+        .door-group-selector { background: #1a1a1a; padding: 4px; border-radius: 4px; border: 1px solid #ffd700; margin-top: 2px; }
+        .door-group-selector.hidden { display: none; }
+        .door-group-selector label { font-size: 9px; color: #ffd700; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <h1>🎮 THESEUS EDITOR v12</h1>
+
+    <div class="info-panel">
+        <b>Pan:</b> Tasto destro + trascina | <b>Disegna:</b> Click sinistro | <b>Griglia:</b> <span id="virtualSize">0x0 px</span>
+    </div>
+
+    <div class="toolbar">
+        <div class="group">
+            <div style="font-size:9px; color:#888;">1. SFONDO</div>
+            <input type="file" id="bgLoader" accept="image/*" style="font-size: 9px; width: 120px;">
+            <div class="slider-group">
+                <input type="range" id="bgOpacity" min="0" max="100" value="50">
+                <span id="opacityValue" style="font-size:9px; color:#aaa;">Opacità: 50%</span>
+            </div>
+            <label class="toggle-container">
+                <input type="checkbox" id="showMap" checked onchange="draw()"> Mostra Livello
+            </label>
+            <div class="arrow-controls">
+                <div></div><button onclick="moveBg(0, -5)">▲</button><div></div>
+                <button onclick="moveBg(-5, 0)">◄</button><button onclick="centerBg()">●</button><button onclick="moveBg(5, 0)">►</button>
+                <div></div><button onclick="moveBg(0, 5)">▼</button><div></div>
+            </div>
+        </div>
+
+        <div class="group">
+            <div style="font-size:9px; color:#888;">2. GRIGLIA</div>
+            <div style="display:flex; gap:2px; align-items:center;">
+                <input type="number" id="gridCols" value="25">
+                <span style="font-size:9px;">×</span>
+                <input type="number" id="gridRows" value="25">
+            </div>
+            <div style="display:flex; gap:2px; align-items:center; margin-top:2px;">
+                <span style="font-size:9px;">Tile:</span>
+                <input type="number" id="brickSize" value="20">
+            </div>
+            <button onclick="updateGrid()" style="background: #007bff; margin-top: 4px; width: 100%;">Applica</button>
+        </div>
+
+        <div class="group">
+            <div style="font-size:9px; color:#888;">3. VISTA</div>
+            <button onclick="resetView()">Reset Pan</button>
+            <button onclick="centerView()">Centra</button>
+            <div style="font-size:9px; color:#888;" id="panInfo">0, 0</div>
+        </div>
+
+        <div class="group">
+            <div style="font-size:9px; color:#888;">4. BASE</div>
+            <button id="btnDraw" class="active" onclick="setTool(1)">MURO</button>
+            <button id="btnLava" onclick="setTool(2)">LAVA</button>
+            <button id="btnEraser" onclick="setTool(0)">GOMMA</button>
+        </div>
+
+        <div class="group">
+            <div style="font-size:9px; color:#888;">5. EROI/KEY</div>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:2px;">
+                <button id="btnThes" onclick="setTool(9)">THES</button>
+                <button id="btnWoman" onclick="setTool(3)">WOMAN</button>
+                <button id="btnKey" onclick="setTool(10)">KEY</button>
+                <button id="btnStar" onclick="setTool(12)">STAR</button>
+            </div>
+        </div>
+
+        <div class="group">
+            <div style="font-size:9px; color:#888;">6. NEMICI</div>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:2px;">
+                <button id="btnEnemyH" onclick="setTool(11)" style="background: #800080;">EN-H</button>
+                <button id="btnEnemyV" onclick="setTool(13)" style="background: #4b0082;">EN-V</button>
+                <button id="btnEnemyS" onclick="setTool(14)" style="background: #8b0000;">EN-S</button>
+                <button id="btnEnemyX" onclick="setTool(15)" style="background: #ff1493;">EN-X</button>
+            </div>
+        </div>
+
+        <div class="group">
+            <div style="font-size:9px; color:#888;">7. PORTE</div>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:2px;">
+                <button id="btnOpen" onclick="setTool(4)">OPEN</button>
+                <button id="btnClose" onclick="setTool(5)">CLOSE</button>
+                <button id="btnDoor" onclick="setTool(6)">DOOR</button>
+            </div>
+            <div class="door-group-selector" id="doorGroupSelector">
+                <label>GR:</label>
+                <input type="text" id="doorGroup" maxlength="1" value="A">
+            </div>
+        </div>
+
+        <div class="group">
+            <div style="font-size:9px; color:#888;">8. BONUS</div>
+            <button id="btnTimer" onclick="setTool(16)" style="background: #00ff00; color: #000;">TIMER</button>
+            <button id="btnFlag" onclick="setTool(7)">FLAG</button>
+            <button id="btnBulb" onclick="setTool(8)">BULB</button>
+        </div>
+
+        <div class="group">
+            <div style="font-size:9px; color:#888;">9. FILE</div>
+            <button style="background: #28a745; font-weight: bold;" onclick="exportMap()">GENERA</button>
+            <button style="background: #007bff; font-weight: bold;" onclick="document.getElementById('importFile').click()">CARICA</button>
+            <button style="background: #dc3545; font-weight: bold;" onclick="clearMap()">RESET</button>
+            <input type="file" id="importFile" accept=".js,.txt">
+        </div>
+    </div>
+
+    <div id="editor-wrapper">
+        <canvas id="editorCanvas" width="500" height="500"></canvas>
+    </div>
+
+    <textarea id="outputJson" readonly onclick="this.select()" placeholder="Codice generato qui..."></textarea>
+
+<script>
+    const canvas = document.getElementById('editorCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    const CANVAS_WIDTH = 500;
+    const CANVAS_HEIGHT = 500;
+    
+    let CONFIG = { brickSize: 20, cols: 25, rows: 25, virtualWidth: 500, virtualHeight: 500 };
+    let viewport = { offsetX: 0, offsetY: 0, isDragging: false, lastX: 0, lastY: 0 };
+    let bgState = { x: 0, y: 0, imgObject: null, opacity: 0.5 };
+    let map = [];
+    let isMouseDown = false;
+    let currentTool = 1;
+    let currentDoorGroup = 'A';
+
+    function setTool(t) {
+        currentTool = t;
+        document.querySelectorAll('.toolbar button').forEach(b => b.classList.remove('active'));
+        const doorGroupSelector = document.getElementById('doorGroupSelector');
+        if (t === 4 || t === 5 || t === 6) {
+            doorGroupSelector.classList.remove('hidden');
+            currentDoorGroup = document.getElementById('doorGroup').value.toUpperCase() || 'A';
+        } else {
+            doorGroupSelector.classList.add('hidden');
+        }
+    }
+
+    document.getElementById('doorGroup').addEventListener('input', function(e) {
+        let val = e.target.value.toUpperCase();
+        if (val.match(/^[A-Z0-9]$/)) { currentDoorGroup = val; e.target.value = val; }
+        else if (val.length > 0) { e.target.value = currentDoorGroup; }
+    });
+
+    function updateGrid() {
+        CONFIG.cols = parseInt(document.getElementById('gridCols').value);
+        CONFIG.rows = parseInt(document.getElementById('gridRows').value);
+        CONFIG.brickSize = parseInt(document.getElementById('brickSize').value);
+        CONFIG.virtualWidth = CONFIG.cols * CONFIG.brickSize;
+        CONFIG.virtualHeight = CONFIG.rows * CONFIG.brickSize;
+        document.getElementById('virtualSize').textContent = `${CONFIG.virtualWidth}×${CONFIG.virtualHeight} px`;
+        let newMap = [];
+        for (let r = 0; r < CONFIG.rows; r++) {
+            let row = [];
+            for (let c = 0; c < CONFIG.cols; c++) {
+                if (map[r] && map[r][c] !== undefined) { row.push(map[r][c]); } 
+                else { row.push({ type: 0 }); }
+            }
+            newMap.push(row);
+        }
+        map = newMap;
+        draw();
+    }
+
+    function clearMap() {
+        if(confirm("Vuoi cancellare tutta la mappa?")) {
+            map = [];
+            for (let r = 0; r < CONFIG.rows; r++) {
+                let row = [];
+                for (let c = 0; c < CONFIG.cols; c++) { row.push({ type: 0 }); }
+                map.push(row);
+            }
+            draw();
+        }
+    }
+
+    document.getElementById('importFile').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            try {
+                let text = event.target.result;
+                text = text.replace(/\/\*[\s\S]*?\*\//g, '');
+                const startIdx = text.indexOf('(');
+                const endIdx = text.lastIndexOf(')');
+                if (startIdx === -1 || endIdx === -1) throw new Error("Formato non valido");
+                const dataString = text.substring(startIdx + 1, endIdx);
+                let importedData = eval("(" + dataString + ")");
+                if (importedData && importedData.map) {
+                    CONFIG.brickSize = importedData.tileSize || 20;
+                    CONFIG.cols = importedData.cols || importedData.map[0].length;
+                    CONFIG.rows = importedData.rows || importedData.map.length;
+                    document.getElementById('brickSize').value = CONFIG.brickSize;
+                    document.getElementById('gridCols').value = CONFIG.cols;
+                    document.getElementById('gridRows').value = CONFIG.rows;
+                    CONFIG.virtualWidth = CONFIG.cols * CONFIG.brickSize;
+                    CONFIG.virtualHeight = CONFIG.rows * CONFIG.brickSize;
+                    map = [];
+                    for (let r = 0; r < importedData.map.length; r++) {
+                        let row = [];
+                        for (let c = 0; c < importedData.map[r].length; c++) {
+                            let cell = importedData.map[r][c];
+                            row.push(typeof cell === 'object' ? cell : { type: cell });
+                        }
+                        map.push(row);
+                    }
+                    draw();
+                    alert("Caricato!");
+                }
+            } catch (err) { alert("Errore import: " + err.message); }
+            e.target.value = '';
+        };
+        reader.readAsText(file);
+    });
+
+    function exportMap() {
+        let minR = CONFIG.rows, maxR = 0, minC = CONFIG.cols, maxC = 0, empty = true;
+        for(let r=0; r<CONFIG.rows; r++) {
+            for(let c=0; c<CONFIG.cols; c++) {
+                if(map[r][c].type !== 0) {
+                    empty = false;
+                    if(r<minR) minR=r; if(r>maxR) maxR=r;
+                    if(c<minC) minC=c; if(c>maxC) maxC=c;
+                }
+            }
+        }
+        if(empty) { minR=0; maxR=0; minC=0; maxC=0; }
+        let out = `/* LEGENDA: 1=Muro 2=Lava 3=Woman 6=Door 7=Flag 8=Bulb 9=Thes 10=Key 12=Star 16=Timer 11,13,14,15=Enemies */\n`;
+        out += `loadLevelData({\n    tileSize: ${CONFIG.brickSize}, \n    cols: ${maxC - minC + 1},\n    rows: ${maxR - minR + 1},\n    map: [\n`;
+        for(let r=minR; r<=maxR; r++) {
+            let line = [];
+            for(let c=minC; c<=maxC; c++) {
+                let cell = map[r][c];
+                line.push(cell.group ? `{type:${cell.type},group:'${cell.group}'}` : cell.type);
+            }
+            out += `        [${line.join(",")}],\n`;
+        }
+        out += `    ]\n});`;
+        document.getElementById('outputJson').value = out;
+    }
+
+    document.getElementById('bgLoader').addEventListener('change', function(e) {
+        const file = e.target.files[0]; 
+        if(!file) return;
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            const img = new Image(); 
+            img.onload = function() { bgState.imgObject = img; draw(); };
+            img.src = event.target.result;
+        };
+        reader.readAsDataURL(file);
+    });
+
+    document.getElementById('bgOpacity').addEventListener('input', function(e) {
+        bgState.opacity = parseInt(e.target.value) / 100;
+        document.getElementById('opacityValue').textContent = 'Opacità: ' + e.target.value + '%';
+        draw();
+    });
+
+    function moveBg(dx, dy) { bgState.x += dx; bgState.y += dy; draw(); }
+    function centerBg() { bgState.x = 0; bgState.y = 0; draw(); }
+    function resetView() { viewport.offsetX = 0; viewport.offsetY = 0; updatePanInfo(); draw(); }
+    function centerView() { viewport.offsetX = (CANVAS_WIDTH - CONFIG.virtualWidth) / 2; viewport.offsetY = (CANVAS_HEIGHT - CONFIG.virtualHeight) / 2; updatePanInfo(); draw(); }
+    function updatePanInfo() { document.getElementById('panInfo').textContent = `${Math.round(viewport.offsetX)}, ${Math.round(viewport.offsetY)}`; }
+
+    canvas.addEventListener('contextmenu', e => e.preventDefault());
+    canvas.addEventListener('mousedown', function(e) {
+        if (e.button === 2) {
+            viewport.isDragging = true;
+            viewport.lastX = e.clientX;
+            viewport.lastY = e.clientY;
+        } else if (e.button === 0) {
+            isMouseDown = true;
+            paint(e);
+        }
+    });
+
+    canvas.addEventListener('mousemove', function(e) {
+        if (viewport.isDragging) {
+            viewport.offsetX += (e.clientX - viewport.lastX);
+            viewport.offsetY += (e.clientY - viewport.lastY);
+            viewport.lastX = e.clientX;
+            viewport.lastY = e.clientY;
+            updatePanInfo();
+            draw();
+        } else if (isMouseDown) { paint(e); }
+    });
+
+    window.addEventListener('mouseup', () => { viewport.isDragging = false; isMouseDown = false; });
+
+    function draw() {
+        ctx.save();
+        ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+        ctx.translate(viewport.offsetX, viewport.offsetY);
+        
+        // Disegna Sfondo
+        if (bgState.imgObject) {
+            ctx.save();
+            ctx.globalAlpha = bgState.opacity;
+            ctx.drawImage(bgState.imgObject, (CONFIG.virtualWidth - bgState.imgObject.width) / 2 + bgState.x, (CONFIG.virtualHeight - bgState.imgObject.height) / 2 + bgState.y);
+            ctx.restore();
+        }
+        
+        // Verifica se mostrare gli elementi del livello
+        const isVisible = document.getElementById('showMap').checked;
+        
+        if (isVisible) {
+            // Disegna Griglia
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+            for (let x = 0; x <= CONFIG.virtualWidth; x += CONFIG.brickSize) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, CONFIG.virtualHeight); ctx.stroke(); }
+            for (let y = 0; y <= CONFIG.virtualHeight; y += CONFIG.brickSize) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(CONFIG.virtualWidth, y); ctx.stroke(); }
+            
+            // Disegna Oggetti
+            for (let r = 0; r < CONFIG.rows; r++) {
+                for (let c = 0; c < CONFIG.cols; c++) {
+                    if (map[r] && map[r][c] && map[r][c].type !== 0) { drawItem(c * CONFIG.brickSize, r * CONFIG.brickSize, CONFIG.brickSize, map[r][c]); }
+                }
+            }
+        }
+        ctx.restore();
+    }
+
+    function drawItem(x, y, size, cell) {
+        const type = cell.type;
+        const group = cell.group || '';
+        const fs = Math.max(8, size * 0.4);
+        ctx.font = `${fs}px monospace`;
+        switch(type) {
+            case 1: ctx.fillStyle='#999'; ctx.fillRect(x,y,size,size); break;
+            case 2: ctx.fillStyle='#d00'; ctx.fillRect(x,y,size,size); break;
+            case 3: ctx.fillStyle='#e83e8c'; ctx.fillRect(x,y,size,size); ctx.fillStyle='#fff'; ctx.fillText("W",x+size*0.2,y+size*0.6); break;
+            case 4: ctx.fillStyle='#007bff'; ctx.fillRect(x,y,size,size); ctx.fillStyle='#fff'; ctx.fillText("IN"+group,x+size*0.1,y+size*0.6); break;
+            case 5: ctx.fillStyle='#fd7e14'; ctx.fillRect(x,y,size,size); ctx.fillStyle='#fff'; ctx.fillText("OUT"+group,x+size*0.1,y+size*0.6); break;
+            case 6: ctx.fillStyle='#6f42c1'; ctx.fillRect(x,y,size,size); ctx.fillStyle='#fff'; ctx.fillText("D"+group,x+size*0.2,y+size*0.6); break;
+            case 7: ctx.fillStyle='#28a745'; ctx.fillRect(x,y,size,size); ctx.fillStyle='#fff'; ctx.fillText("P",x+size*0.2,y+size*0.6); break;
+            case 8: ctx.fillStyle='#ffc107'; ctx.fillRect(x,y,size,size); break;
+            case 9: ctx.fillStyle='#0ff'; ctx.fillRect(x,y,size,size); ctx.fillStyle='#000'; ctx.fillText("T",x+size*0.25,y+size*0.6); break;
+            case 10: ctx.fillStyle='#ffd700'; ctx.fillRect(x,y,size,size); ctx.fillStyle='#000'; ctx.fillText("K",x+size*0.25,y+size*0.6); break;
+            case 11: ctx.fillStyle='#800080'; ctx.fillRect(x,y,size,size); ctx.fillStyle='#fff'; ctx.fillText("H",x+size*0.3,y+size*0.6); break;
+            case 12: ctx.fillStyle='#ffff00'; ctx.beginPath(); ctx.arc(x+size/2, y+size/2, size/3, 0, Math.PI*2); ctx.fill(); break;
+            case 13: ctx.fillStyle='#4b0082'; ctx.fillRect(x,y,size,size); ctx.fillStyle='#fff'; ctx.fillText("V",x+size*0.3,y+size*0.6); break;
+            case 14: ctx.fillStyle='#8b0000'; ctx.fillRect(x,y,size,size); ctx.fillStyle='#fff'; ctx.fillText("S",x+size*0.3,y+size*0.6); break;
+            case 15: ctx.fillStyle='#ff1493'; ctx.fillRect(x,y,size,size); ctx.fillStyle='#fff'; ctx.fillText("X",x+size*0.3,y+size*0.6); break;
+            case 16: ctx.fillStyle='#00ff00'; ctx.fillRect(x,y,size,size); ctx.fillStyle='#000'; ctx.fillText("TM",x+size*0.1,y+size*0.6); break;
+        }
+    }
+
+    function getPos(e) {
+        const rect = canvas.getBoundingClientRect();
+        return {
+            c: Math.floor((e.clientX - rect.left - viewport.offsetX) / CONFIG.brickSize),
+            r: Math.floor((e.clientY - rect.top - viewport.offsetY) / CONFIG.brickSize)
+        };
+    }
+
+    function paint(e) {
+        if (!document.getElementById('showMap').checked) return; // Impedisce di disegnare se invisibile
+        const p = getPos(e);
+        if(p.c >= 0 && p.c < CONFIG.cols && p.r >= 0 && p.r < CONFIG.rows) {
+            map[p.r][p.c] = (currentTool >= 4 && currentTool <= 6) ? { type: currentTool, group: currentDoorGroup } : { type: currentTool };
+            draw();
+        }
+    }
+
+    document.querySelectorAll('.toolbar button').forEach(btn => {
+        btn.addEventListener('click', function() {
+            if(this.id.startsWith('btn')) {
+                document.querySelectorAll('.toolbar button').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+            }
+        });
+    });
+
+    updateGrid();
+</script>
+</body>
+</html>

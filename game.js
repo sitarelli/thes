@@ -48,12 +48,11 @@ const imagesToLoad = [
 imagesToLoad.forEach(imgData => {
     const img = new Image();
     img.src = imgData.src;
-    img.onload = () => { loadedImages++; checkStart(); };
-    img.onerror = () => { sprites[imgData.name] = null; loadedImages++; checkStart(); };
+    img.onload = () => { loadedImages++; updateProgress(); };
+    img.onerror = () => { sprites[imgData.name] = null; loadedImages++; updateProgress(); };
     sprites[imgData.name] = img;
 });
 
-// --- AUDIO ---
 // --- AUDIO ---
 const sfx = {
     doorOpen: new Audio('audio/dooropen.mp3'),
@@ -61,7 +60,6 @@ const sfx = {
     walk: new Audio('audio/walkingthes.mp3'),
     fly: new Audio('audio/flyingthes.m4a'),
     levelup: new Audio('audio/levelup.mp3'),
-    // NUOVI SUONI
     beginLevel: new Audio('audio/beginlevel.mp3'),
     keyPickup: new Audio('audio/key.mp3'),
     death: new Audio('audio/death.mp3'),
@@ -73,7 +71,41 @@ sfx.fly.loop = true;
 sfx.walk.volume = 0.4;
 sfx.fly.volume = 0.5;
 
-function checkStart() { if (loadedImages === imagesToLoad.length) loadLevelScript(1); }
+// PRELOAD AUDIO
+let loadedAudio = 0;
+const audioToLoad = Object.keys(sfx).length;
+
+Object.values(sfx).forEach(audio => {
+    const onLoad = () => {
+        loadedAudio++;
+        updateProgress();
+        audio.removeEventListener('canplaythrough', onLoad);
+        audio.removeEventListener('error', onLoad);
+    };
+    audio.addEventListener('canplaythrough', onLoad, { once: true });
+    audio.addEventListener('error', onLoad, { once: true });
+    audio.load();
+});
+
+// PROGRESS BAR
+function updateProgress() {
+    const total = imagesToLoad.length + audioToLoad;
+    const loaded = loadedImages + loadedAudio;
+    const percent = Math.floor((loaded / total) * 100);
+    const debugInfo = document.getElementById('debug-info');
+    if (debugInfo) debugInfo.textContent = `Caricamento: ${percent}%`;
+    checkStart();
+}
+
+function checkStart() { 
+    const total = imagesToLoad.length + audioToLoad;
+    const loaded = loadedImages + loadedAudio;
+    if (loaded === total) {
+        const debugInfo = document.getElementById('debug-info');
+        if (debugInfo) debugInfo.textContent = 'Pronto! 🎮';
+        loadLevelScript(1);
+    }
+}
 
 // STATO DEL GIOCO
 const gameState = { 
@@ -184,12 +216,24 @@ function restorePower(amount) {
     gameState.power = Math.min(gameState.maxPower, gameState.power + amount);
 }
 
+// FIX ERRORI AUDIO
+function safePlayAudio(audio) {
+    if (!audio) return;
+    audio.currentTime = 0;
+    const playPromise = audio.play();
+    if (playPromise !== undefined) {
+        playPromise.catch(err => {
+            // Ignora NotAllowedError - normale prima dell'interazione utente
+            if (err.name !== 'NotAllowedError') console.warn('Audio error:', err);
+        });
+    }
+}
+
 function initGame(levelData) {
     if (!levelData) return;
     
     // Riproduci suono inizio livello
-    sfx.beginLevel.currentTime = 0;
-    sfx.beginLevel.play();
+    safePlayAudio(sfx.beginLevel);
     gameState.hasKey = false; 
     gameState.doorOpen = false; 
     gameState.won = false;
@@ -291,8 +335,7 @@ function playerDie() {
     player.frameTimer = 0;
     
     stopAllSounds(); 
-    sfx.death.currentTime = 0;
-    sfx.death.play(); 
+    safePlayAudio(sfx.death); 
 }
 
 
@@ -453,11 +496,11 @@ if (gameState.gameOver || gameState.won) {
 
     // SUONI MOVIMENTO
     if (player.animState === 2 || player.animState === 3) {
-        if (sfx.fly.paused) sfx.fly.play();
+        if (sfx.fly.paused) safePlayAudio(sfx.fly);
         sfx.walk.pause(); 
     } 
     else if (player.animState === 1) {
-        if (sfx.walk.paused) sfx.walk.play();
+        if (sfx.walk.paused) safePlayAudio(sfx.walk);
         sfx.fly.pause();
     } 
     else {
@@ -488,10 +531,8 @@ if (gameState.gameOver || gameState.won) {
             // Applica danno solo se il cooldown è finito
             if (player.damageCooldown <= 0) {
                 gameState.power -= ENEMY_HIT_DAMAGE;
-                sfx.contact.currentTime = 0; // Reset per sovrapposizioni veloci
-                sfx.contact.play();        // <--- AGGIUNTO
-                // playSound('hit'); // Suono colpo (ex die)
-                player.damageCooldown = 2.0; // 1 secondo di invulnerabilità
+                safePlayAudio(sfx.contact);
+                player.damageCooldown = 2.0;
                 
                 // Controllo morte immediato
                 if (gameState.power <= 0) {
@@ -508,7 +549,7 @@ if (gameState.gameOver || gameState.won) {
         if (rectIntersect(player, l, true)) {
             // Sottrae vita costantemente in base al tempo (dt)
             gameState.power -= LAVA_DAMAGE_PER_SECOND * dt;
-            if (sfx.lava.paused) sfx.lava.play();
+            if (sfx.lava.paused) safePlayAudio(sfx.lava);
             // Check morte
             if (gameState.power <= 0) {
                 gameState.power = 0;
@@ -521,7 +562,7 @@ if (gameState.gameOver || gameState.won) {
     items.forEach(item => { 
         if (!item.taken && rectIntersect(player, item, false)) { 
             item.taken = true; 
-            if (item.type === 'key') { gameState.hasKey = true; sfx.keyPickup.play(); }
+            if (item.type === 'key') { gameState.hasKey = true; safePlayAudio(sfx.keyPickup); }
             else if (item.type === 'bulb') { restorePower(0.5); gameState.bulbs++; playSound('bonus'); }
             else if (item.type === 'star') { restorePower(0.25); gameState.stars++; playSound('bonus'); }
             else if (item.type === 'flag') { gameState.flags++; playSound('bonus'); }
@@ -534,14 +575,14 @@ if (gameState.gameOver || gameState.won) {
             if (trig.type==='open'){ 
                 triggers.forEach(door => {
                     if (door.type === 'door' && door.group === trig.group && !door.open) {
-                        door.open = true; sfx.doorOpen.currentTime = 0; sfx.doorOpen.play();
+                        door.open = true; safePlayAudio(sfx.doorOpen);
                     }
                 });
             } 
             if (trig.type==='close'){ 
                 triggers.forEach(door => {
                     if (door.type === 'door' && door.group === trig.group && door.open) {
-                        door.open = false; sfx.doorClose.currentTime = 0; sfx.doorClose.play();
+                        door.open = false; safePlayAudio(sfx.doorClose);
                     }
                 });
             } 
@@ -562,7 +603,7 @@ function winLevel(d) {
     gameState.won = true; 
     gameState.victoryTime = 0;
     gameState.vX = d.x; gameState.vY = d.y; gameState.vW = d.w; gameState.vH = d.h;
-    sfx.walk.pause(); sfx.fly.pause(); sfx.levelup.currentTime = 0; sfx.levelup.play();
+    sfx.walk.pause(); sfx.fly.pause(); safePlayAudio(sfx.levelup);
     
     setTimeout(() => { 
         sfx.levelup.pause(); 
@@ -897,7 +938,7 @@ function showRetryButton() {
     btn.id = 'retry-btn';
     btn.textContent = 'RIPROVA';
     Object.assign(btn.style, {
-        position: 'absolute', left: '50%', top: '60%',
+        position: 'absolute', left: '50%', top: '65%',
         transform: 'translate(-50%, -50%)', padding: '15px 30px',
         fontSize: '24px', fontFamily: 'Orbitron, sans-serif',
         cursor: 'pointer', backgroundColor: '#ff0000', color: 'white',
@@ -947,6 +988,10 @@ const tapOverlay = document.getElementById('tap-to-start');
 
 function startGame() {
     if (audioCtx.state === 'suspended') audioCtx.resume();
+    
+    // Riproduci suono inizio gioco
+    safePlayAudio(sfx.beginLevel);
+    
     if (tapOverlay) {
         tapOverlay.classList.remove('show');
         setTimeout(() => tapOverlay.style.display = 'none', 300);
@@ -959,7 +1004,8 @@ function startGame() {
     if (!gameRunning) { gameRunning = true; lastTime = 0; accumulator = 0; requestAnimationFrame(loop); }
 }
 
-if (isMobileDevice() && tapOverlay) {
+// Mostra tap overlay sia su mobile che desktop
+if (tapOverlay) {
     tapOverlay.classList.add('show');
     tapOverlay.addEventListener('touchend', function(e) { e.preventDefault(); startGame(); }, { passive: false });
     tapOverlay.addEventListener('click', function(e) { e.preventDefault(); startGame(); });

@@ -1,5 +1,6 @@
 /* ============================================
    THESEUS - MOBILE-OPTIMIZED ARCADE THEME
+   Con Glassmorphism Moderno
    ============================================ */
 
 :root {
@@ -15,6 +16,7 @@
     --glow-cyan: 0 0 10px var(--neon-cyan), 0 0 20px var(--neon-cyan);
     --glow-magenta: 0 0 10px var(--neon-magenta), 0 0 20px var(--neon-magenta);
     --glow-green: 0 0 10px var(--neon-green), 0 0 20px var(--neon-green);
+    --glow-yellow: 0 0 10px var(--neon-yellow), 0 0 20px var(--neon-yellow);
 }
 
 * {
@@ -24,6 +26,7 @@
     user-select: none;
     -webkit-user-select: none;
     -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
 }
 
 body {
@@ -33,6 +36,7 @@ body {
     overflow: hidden;
     width: 100vw;
     height: 100vh;
+    position: fixed;
 }
 
 /* ============================================
@@ -51,6 +55,13 @@ body {
 
 .rotate-content {
     text-align: center;
+    color: var(--neon-cyan);
+}
+
+.rotate-content p {
+    margin-top: 20px;
+    font-size: 18px;
+    text-shadow: var(--glow-cyan);
 }
 
 .rotate-icon {
@@ -59,24 +70,25 @@ body {
 }
 
 @keyframes rotatePhone {
-    0%,100% { transform: rotate(0); }
+    0%, 100% { transform: rotate(0deg); }
     50% { transform: rotate(90deg); }
 }
 
-/* mostra solo in portrait */
+/* Mostra solo in portrait */
 @media (max-width: 900px) and (orientation: portrait) {
     #rotate-message { display: flex; }
-    #game-container { display: none; }
+    #game-container,
+    #touch-controls { display: none !important; }
 }
 
 /* ============================================
-   TAP TO START
+   TAP TO START - Glassmorphism
    ============================================ */
 
 .tap-overlay {
     position: fixed;
     inset: 0;
-    background: radial-gradient(#000, #0a0a1e);
+    background: radial-gradient(circle at center, #0a0a2e, #000);
     z-index: 9999;
     display: none;
     justify-content: center;
@@ -90,32 +102,89 @@ body {
 .tap-content {
     text-align: center;
     animation: tapPulse 2s infinite;
+    padding: 40px;
+    border-radius: 20px;
+    
+    /* Glassmorphism */
+    background: rgba(10, 20, 40, 0.4);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(0, 255, 255, 0.2);
+    box-shadow: 0 8px 32px 0 rgba(0, 255, 255, 0.1);
 }
 
 @keyframes tapPulse {
-    0%,100% { transform: scale(1); }
+    0%, 100% { transform: scale(1); }
     50% { transform: scale(1.05); }
 }
 
 .tap-title {
     font-family: 'Orbitron', sans-serif;
-    font-size: 42px;
-    letter-spacing: 6px;
+    font-size: 48px;
+    font-weight: 900;
+    letter-spacing: 8px;
+    color: var(--neon-cyan);
     text-shadow: var(--glow-cyan);
+    margin-bottom: 10px;
+}
+
+.tap-subtitle {
+    font-size: 16px;
+    color: var(--neon-magenta);
+    letter-spacing: 3px;
+    margin-bottom: 30px;
+}
+
+.tap-icon {
+    font-size: 60px;
+    margin: 20px 0;
+    animation: bounce 1s infinite;
+}
+
+@keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
 }
 
 .tap-button {
     margin-top: 30px;
-    padding: 15px 35px;
+    padding: 18px 40px;
     border: 3px solid var(--neon-green);
+    border-radius: 10px;
     color: var(--neon-green);
     font-family: 'Orbitron', sans-serif;
-    font-size: 26px;
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: 4px;
     box-shadow: var(--glow-green);
+    display: inline-block;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    
+    /* Glassmorphism sul pulsante */
+    background: rgba(0, 255, 65, 0.1);
+    backdrop-filter: blur(5px);
+}
+
+.tap-button:hover {
+    background: rgba(0, 255, 65, 0.2);
+    transform: scale(1.05);
+}
+
+.tap-hint {
+    margin-top: 20px;
+    font-size: 12px;
+    color: rgba(0, 255, 255, 0.6);
+}
+
+.tap-debug {
+    margin-top: 20px;
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.3);
 }
 
 /* ============================================
-   POWER BAR
+   POWER BAR - Glassmorphism
    ============================================ */
 
 .power-container {
@@ -123,18 +192,31 @@ body {
     top: 0;
     left: 0;
     right: 0;
-    height: 8px;
-    background: rgba(20, 20, 40, 0.95);
+    height: 10px;
+    background: rgba(10, 10, 30, 0.8);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
     z-index: 50;
-    border-bottom: 2px solid rgba(0, 255, 255, 0.3);
+    border-bottom: 1px solid rgba(0, 255, 255, 0.3);
+    overflow: hidden;
 }
 
 #power-bar {
     height: 100%;
     width: 100%;
-    background: var(--neon-green);
-    box-shadow: 0 0 10px var(--neon-green);
+    background: linear-gradient(90deg, var(--neon-green), var(--neon-cyan));
+    box-shadow: 0 0 15px var(--neon-green), inset 0 0 10px rgba(255, 255, 255, 0.3);
     transition: width 0.3s ease, background-color 0.5s ease;
+}
+
+#power-bar.low {
+    background: linear-gradient(90deg, var(--neon-red), var(--neon-yellow));
+    animation: powerPulse 0.5s infinite;
+}
+
+@keyframes powerPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
 }
 
 /* ============================================
@@ -146,161 +228,317 @@ body {
     flex-direction: column;
     width: 100%;
     height: 100%;
-    padding-top: 8px; /* Spazio per la power bar */
+    padding-top: 10px;
 }
 
+/* Header con Glassmorphism */
 .compact-header {
-    height: 44px;
-    background: var(--panel-bg);
-    border-bottom: 2px solid var(--neon-cyan);
+    height: 50px;
+    background: rgba(10, 10, 30, 0.7);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border-bottom: 2px solid rgba(0, 255, 255, 0.3);
+    border-radius: 0 0 15px 15px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 12px;
+    padding: 0 20px;
+    margin: 0 10px;
+    box-shadow: 0 4px 20px rgba(0, 255, 255, 0.1);
 }
 
 .title-compact {
     font-family: 'Orbitron', sans-serif;
-    letter-spacing: 4px;
+    font-size: 20px;
+    font-weight: 900;
+    letter-spacing: 6px;
+    color: var(--neon-cyan);
+    text-shadow: var(--glow-cyan);
 }
 
 .game-wrapper {
     flex: 1;
     display: flex;
     justify-content: center;
-    align-items: center; /* Centro perfetto */
+    align-items: center;
     width: 100%;
     overflow: hidden;
+    padding: 15px;
 }
 
 #game-canvas {
-    /* DIMENSIONI E PROPORZIONI */
-    width: 55%;            /* Larghezza target */
-    height: auto;          /* Lascia calcolare l'altezza... */
-    max-height: 75vh;      /* ...ma non superare questa altezza */
+    width: 55%;
+    height: auto;
+    max-height: 75vh;
+    object-fit: contain;
     
-    /* LA SOLUZIONE ALLA DISTORSIONE */
-    object-fit: contain;   /* Impedisce tassativamente lo schiacciamento */
-    
-    /* ESTETICA */
     border: 3px solid var(--neon-cyan);
-    box-shadow: var(--glow-cyan);
+    border-radius: 10px;
+    box-shadow: var(--glow-cyan),
+                0 0 30px rgba(0, 255, 255, 0.2),
+                inset 0 0 20px rgba(0, 255, 255, 0.05);
     image-rendering: pixelated;
     background: #000;
 }
 
 /* ============================================
-   TOUCH CONTROLS (UNICA VERSIONE)
-   ============================================ */
-
-#touch-controls {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    z-index: 20;
-    display: none;
-}
-
-.controls-left,
-.controls-right {
-    position: absolute;
-    top: 70%;
-    transform: translateY(-50%);
-    pointer-events: all;
-}
-
-.controls-left { left: 20px; }
-.controls-right { right: 20px; }
-
-/* joystick */
-#joystick-base {
-    width: 140px;
-    height: 70px;
-    background: rgba(0,20,40,0.8);
-    border-radius: 35px;
-    position: relative;
-}
-
-#joystick-stick {
-    width: 60px;
-    height: 60px;
-    background: var(--neon-magenta);
-    border-radius: 50%;
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-}
-
-/* fly */
-#btn-fly {
-    width: 90px;
-    height: 90px;
-    border-radius: 50%;
-    border: 3px solid var(--neon-green);
-    background: rgba(0,255,65,0.2);
-    color: var(--neon-green);
-    font-family: 'Orbitron', sans-serif;
-}
-
-/* MOSTRA CONTROLLI SU MOBILE E TABLET (LANDSCAPE) */
-@media (max-width: 1366px) and (orientation: landscape), (pointer: coarse) {
-    #touch-controls { display: block; }
-}
-
-/* ============================================
-   HUD STYLES
+   HUD STYLES - Glassmorphism
    ============================================ */
 
 #hud-compact {
     display: flex;
-    gap: 12px;
+    gap: 16px;
     align-items: center;
 }
 
 .hud-item {
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 6px;
     font-size: 14px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    background: rgba(0, 255, 255, 0.05);
+    border: 1px solid rgba(0, 255, 255, 0.2);
+    transition: all 0.3s ease;
+}
+
+.hud-item:hover {
+    background: rgba(0, 255, 255, 0.1);
+    transform: scale(1.05);
 }
 
 .hud-label {
     color: var(--neon-cyan);
     font-weight: bold;
+    font-family: 'Orbitron', sans-serif;
+    letter-spacing: 1px;
 }
 
 .hud-value {
     color: var(--neon-yellow);
-    min-width: 20px;
+    min-width: 24px;
     text-align: center;
+    font-weight: bold;
+    text-shadow: 0 0 5px var(--neon-yellow);
 }
 
 .hud-icon {
-    font-size: 16px;
-}
-
-/* Nascondi il vecchio display delle vite - ora usiamo la power bar */
-.hud-item .hearts {
-    display: none;
+    font-size: 18px;
+    filter: drop-shadow(0 0 3px currentColor);
 }
 
 .key-indicator {
-    font-size: 18px;
-    color: #666;
-    transition: all 0.3s;
+    font-size: 20px;
+    color: #444;
+    transition: all 0.3s ease;
 }
 
 .key-indicator.has-key {
     color: var(--neon-yellow);
-    text-shadow: 0 0 10px var(--neon-yellow);
+    text-shadow: var(--glow-yellow);
+    animation: keyPulse 1s infinite;
 }
+
+@keyframes keyPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+}
+
+/* ============================================
+   TOUCH CONTROLS - Glassmorphism Migliorato
+   Fix specifico per tablet
+   ============================================ */
+
+#touch-controls {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 100;
+    display: none;
+}
+
+.controls-left,
+.controls-right {
+    position: absolute;
+    bottom: 80px;
+    pointer-events: all;
+    touch-action: none;
+}
+
+.controls-left { 
+    left: 25px; 
+}
+
+.controls-right { 
+    right: 25px; 
+}
+
+/* Joystick con Glassmorphism */
+#joystick-base {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    position: relative;
+    
+    /* Glassmorphism */
+    background: rgba(10, 20, 50, 0.4);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 2px solid rgba(0, 255, 255, 0.3);
+    box-shadow: 0 8px 32px 0 rgba(0, 255, 255, 0.2),
+                inset 0 0 20px rgba(0, 255, 255, 0.1);
+}
+
+#joystick-stick {
+    width: 70px;
+    height: 70px;
+    background: radial-gradient(circle, var(--neon-magenta), #aa00aa);
+    border-radius: 50%;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    border: 3px solid rgba(255, 0, 255, 0.5);
+    box-shadow: var(--glow-magenta),
+                inset 0 0 15px rgba(255, 255, 255, 0.3);
+    transition: all 0.1s ease;
+}
+
+/* FLY Button - Fix per tablet */
+#btn-fly {
+    width: 110px;
+    height: 110px;
+    border-radius: 50%;
+    border: 3px solid var(--neon-green);
+    background: radial-gradient(circle, rgba(0, 255, 65, 0.3), rgba(0, 255, 65, 0.1));
+    color: var(--neon-green);
+    font-family: 'Orbitron', sans-serif;
+    font-size: 22px;
+    font-weight: 900;
+    letter-spacing: 2px;
+    cursor: pointer;
+    
+    /* Glassmorphism */
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-shadow: var(--glow-green),
+                0 8px 32px 0 rgba(0, 255, 65, 0.3),
+                inset 0 0 20px rgba(0, 255, 65, 0.2);
+    
+    /* FIX CRITICO PER TABLET */
+    touch-action: manipulation;
+    -webkit-touch-callout: none;
+    position: relative;
+    z-index: 101;
+    
+    transition: all 0.2s ease;
+}
+
+/* Stati del pulsante FLY */
+#btn-fly:active,
+#btn-fly.active {
+    background: radial-gradient(circle, rgba(0, 255, 65, 0.6), rgba(0, 255, 65, 0.3));
+    transform: scale(0.95);
+    box-shadow: var(--glow-green),
+                0 4px 16px 0 rgba(0, 255, 65, 0.5),
+                inset 0 0 30px rgba(255, 255, 255, 0.4);
+}
+
+#btn-fly:hover {
+    transform: scale(1.05);
+    background: radial-gradient(circle, rgba(0, 255, 65, 0.4), rgba(0, 255, 65, 0.15));
+}
+
+.fly-icon {
+    display: block;
+    pointer-events: none;
+}
+
+/* MOSTRA CONTROLLI SU DISPOSITIVI TOUCH */
+@media (pointer: coarse), (max-width: 1366px) and (orientation: landscape) {
+    #touch-controls { 
+        display: block;
+    }
+}
+
+/* Ottimizzazione per tablet specifici */
+@media (min-width: 768px) and (max-width: 1366px) and (orientation: landscape) {
+    #btn-fly {
+        width: 120px;
+        height: 120px;
+        font-size: 24px;
+    }
+    
+    #joystick-base {
+        width: 160px;
+        height: 160px;
+    }
+    
+    #joystick-stick {
+        width: 75px;
+        height: 75px;
+    }
+    
+    .controls-left { left: 40px; }
+    .controls-right { right: 40px; }
+}
+
+/* Ottimizzazione per smartphone */
+@media (max-width: 767px) and (orientation: landscape) {
+    #btn-fly {
+        width: 100px;
+        height: 100px;
+        font-size: 20px;
+    }
+    
+    #joystick-base {
+        width: 130px;
+        height: 130px;
+    }
+    
+    #joystick-stick {
+        width: 60px;
+        height: 60px;
+    }
+    
+    .controls-left { left: 15px; }
+    .controls-right { right: 15px; }
+}
+
+/* ============================================
+   ANIMAZIONI GENERICHE
+   ============================================ */
 
 .pulse {
     animation: pulse 1s infinite;
 }
 
 @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.7; }
+    0%, 100% { 
+        opacity: 1; 
+        transform: scale(1);
+    }
+    50% { 
+        opacity: 0.7;
+        transform: scale(1.05);
+    }
+}
+
+/* Effetto scanline opzionale per estetica retro */
+#game-canvas::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: repeating-linear-gradient(
+        0deg,
+        rgba(0, 0, 0, 0.15),
+        rgba(0, 0, 0, 0.15) 1px,
+        transparent 1px,
+        transparent 2px
+    );
+    pointer-events: none;
 }
