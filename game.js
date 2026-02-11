@@ -274,12 +274,20 @@ function respawnPlayer() {
     player.canFly = true; // <--- QUESTA RIGA L'HAI GIÀ AGGIUNTA, OTTIMO!
 }
 function playerDie() { 
-    if (gameState.gameOver) return; // Evita chiamate multiple
-    sfx.death.play(); // <--- AGGIUNTO
-    // playSound('die'); 
-    gameState.gameOver = true; 
-    stopAllSounds();
-    showRetryButton();
+    if (gameState.gameOver) return; 
+    
+    gameState.gameOver = true; // Blocca subito gli update del gioco
+    
+    stopAllSounds(); // Ferma i passi e il volo
+    
+    sfx.death.currentTime = 0;
+    sfx.death.play(); // Fai partire il suono di morte
+    
+    // Opzionale: ritarda di un secondo la comparsa del tasto "Riprova"
+    // così il giocatore ha il tempo di sentire il suono e capire cosa è successo
+    setTimeout(() => {
+        showRetryButton();
+    }, 1000);
 }
 
 function getTile(px, py) {
