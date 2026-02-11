@@ -5,11 +5,11 @@
 const config = {
     viewportWidth: 740,
     viewportHeight: 510,
-    baseGravity: 0.15,
-    baseSpeed: 9.0,
-    baseThrust: -0.40,
+    baseGravity: 0.45,
+    baseSpeed: 12.0,
+    baseThrust: -0.80,
     maxFallSpeed: 4.6,
-    maxFlySpeed: -0.16,
+    maxFlySpeed: -0.26,
     enemySpeedMultiplier: 0.14,
     zoom: 1, 
     tileSize: 0,
@@ -53,12 +53,19 @@ imagesToLoad.forEach(imgData => {
 });
 
 // --- AUDIO ---
+// --- AUDIO ---
 const sfx = {
     doorOpen: new Audio('audio/dooropen.mp3'),
     doorClose: new Audio('audio/doorclose.mp3'),
     walk: new Audio('audio/walkingthes.mp3'),
     fly: new Audio('audio/flyingthes.m4a'),
-    levelup: new Audio('audio/levelup.mp3')
+    levelup: new Audio('audio/levelup.mp3'),
+    // NUOVI SUONI
+    beginLevel: new Audio('audio/beginlevel.mp3'),
+    keyPickup: new Audio('audio/key.mp3'),
+    death: new Audio('audio/death.mp3'),
+    contact: new Audio('audio/contact.mp3'),
+    lava: new Audio('audio/lava.mp3')
 };
 sfx.walk.loop = true;
 sfx.fly.loop = true;
@@ -87,9 +94,10 @@ const player = {
     x: 0, y: 0, w: 0, h: 0, vx: 0, vy: 0, startX: 0, startY: 0,
     frameIndex: 0,
     frameTimer: 0,
-    facing: 1,       
+    facing: 1,        
     animState: 0,
-    damageCooldown: 0 // NUOVO: Timer per invulnerabilità
+    damageCooldown: 0,
+    canFly: true // <--- AGGIUNGI QUESTA RIGA
 };
 
 let items = [], enemies = [], triggers = [], decorations = [], lavas = [];
@@ -173,6 +181,9 @@ function restorePower(amount) {
 function initGame(levelData) {
     if (!levelData) return;
     
+    // Riproduci suono inizio livello
+    sfx.beginLevel.currentTime = 0;
+    sfx.beginLevel.play();
     gameState.hasKey = false; 
     gameState.doorOpen = false; 
     gameState.won = false;
@@ -182,7 +193,7 @@ function initGame(levelData) {
     
     currentMap = JSON.parse(JSON.stringify(levelData.map));
     config.tileSize = levelData.tileSize || 20;
-    config.zoom = config.viewportHeight / (20 * config.tileSize);
+    config.zoom = config.viewportHeight / (23 * config.tileSize);
     
     items = []; enemies = []; triggers = []; decorations = []; lavas = [];
     lavaParticles = [];
@@ -259,11 +270,12 @@ function respawnPlayer() {
     player.y = player.startY; 
     player.vx = 0; 
     player.vy = 0; 
-    player.damageCooldown = 0; // Reset cooldown
+    player.damageCooldown = 0;
+    player.canFly = true; // <--- QUESTA RIGA L'HAI GIÀ AGGIUNTA, OTTIMO!
 }
-
 function playerDie() { 
     if (gameState.gameOver) return; // Evita chiamate multiple
+    sfx.death.play(); // <--- AGGIUNTO
     playSound('die'); 
     gameState.gameOver = true; 
     stopAllSounds();
@@ -348,6 +360,8 @@ function update(dt) {
         return;
     }
     
+    
+    
     // MOVIMENTO PLAYER
     const speed = config.baseSpeed * config.tileSize * dt;
     const grav = config.baseGravity * config.tileSize * dt;
@@ -364,16 +378,33 @@ function update(dt) {
         if (player.vx < 0 && getTile(player.x, player.y + p)) player.x = (Math.floor(player.x/config.tileSize)+1)*config.tileSize;
     }
 
-    if (keys.up) player.vy += thr; player.vy += grav;
+    // --- NUOVA LOGICA DI VOLO MODIFICATA ---
+    if (keys.up && player.canFly) {
+        player.vy += thr;
+    } 
+    
+    player.vy += grav;
     const mF = config.maxFallSpeed * config.tileSize, mY = config.maxFlySpeed * config.tileSize;
-    if (player.vy > mF) player.vy = mF; if (player.vy < mY) player.vy = mY;
+    if (player.vy > mF) player.vy = mF; 
+    if (player.vy < mY) player.vy = mY;
     player.y += player.vy;
 
     const wPoints = [0, player.w-1];
     for(let p of wPoints) {
-        if (player.vy < 0 && getTile(player.x + p, player.y)) { player.y = (Math.floor(player.y/config.tileSize)+1)*config.tileSize; player.vy = 0; }
-        if (player.vy > 0 && getTile(player.x + p, player.y + player.h)) { player.y = Math.floor((player.y+player.h)/config.tileSize)*config.tileSize - player.h; player.vy = 0; }
+        // COLLISIONE SOFFITTO
+        if (player.vy < 0 && getTile(player.x + p, player.y)) { 
+            player.y = (Math.floor(player.y/config.tileSize)+1)*config.tileSize; 
+            player.vy = 0; 
+            player.canFly = false; 
+        }
+        // COLLISIONE PAVIMENTO
+        if (player.vy > 0 && getTile(player.x + p, player.y + player.h)) { 
+            player.y = Math.floor((player.y+player.h)/config.tileSize)*config.tileSize - player.h; 
+            player.vy = 0; 
+            player.canFly = true; 
+        }
     }
+
 
     // ANIMAZIONE STATI
     if (player.vy < -0.01) player.animState = 2; else if (player.vy > 0.02) player.animState = 3; else if (Math.abs(player.vx) > 0.01) player.animState = 1; else player.animState = 0;
@@ -415,6 +446,8 @@ function update(dt) {
             // Applica danno solo se il cooldown è finito
             if (player.damageCooldown <= 0) {
                 gameState.power -= ENEMY_HIT_DAMAGE;
+                sfx.contact.currentTime = 0; // Reset per sovrapposizioni veloci
+                sfx.contact.play();        // <--- AGGIUNTO
                 playSound('hit'); // Suono colpo (ex die)
                 player.damageCooldown = 2.0; // 1 secondo di invulnerabilità
                 
@@ -433,7 +466,7 @@ function update(dt) {
         if (rectIntersect(player, l, true)) {
             // Sottrae vita costantemente in base al tempo (dt)
             gameState.power -= LAVA_DAMAGE_PER_SECOND * dt;
-            
+            if (sfx.lava.paused) sfx.lava.play();
             // Check morte
             if (gameState.power <= 0) {
                 gameState.power = 0;
@@ -446,7 +479,7 @@ function update(dt) {
     items.forEach(item => { 
         if (!item.taken && rectIntersect(player, item, false)) { 
             item.taken = true; 
-            if (item.type === 'key') { gameState.hasKey = true; playSound('key'); }
+            if (item.type === 'key') { gameState.hasKey = true; sfx.keyPickup.play(); playSound('key'); }
             else if (item.type === 'bulb') { restorePower(0.5); gameState.bulbs++; playSound('bonus'); }
             else if (item.type === 'star') { restorePower(0.25); gameState.stars++; playSound('bonus'); }
             else if (item.type === 'flag') { gameState.flags++; playSound('bonus'); }
