@@ -41,6 +41,7 @@ const imagesToLoad = [
     { name: 'key', src: 'png/key.png' },
     { name: 'timer', src: 'png/timer.png' },
     { name: 'door', src: 'png/door.png' },
+    { name: 'thes_die', src: 'png/thes_die.png' },
     { name: 'unchained', src: 'png/unchained.png' }
 ];
 
@@ -97,8 +98,13 @@ const player = {
     facing: 1,        
     animState: 0,
     damageCooldown: 0,
-    canFly: true // <--- AGGIUNGI QUESTA RIGA
+    animState: 0,
+    damageCooldown: 0,
+    canFly: true,
+    isDying: false,
+    deathFrame: 0
 };
+
 
 let items = [], enemies = [], triggers = [], decorations = [], lavas = [];
 const camera = { x: 0, y: 0 };
@@ -271,24 +277,24 @@ function respawnPlayer() {
     player.vx = 0; 
     player.vy = 0; 
     player.damageCooldown = 0;
-    player.canFly = true; // <--- QUESTA RIGA L'HAI GIÀ AGGIUNTA, OTTIMO!
+ player.vy = 0; 
+    player.damageCooldown = 0;
+    player.canFly = true; 
+    player.isDying = false;
 }
+
 function playerDie() { 
-    if (gameState.gameOver) return; 
+    if (player.isDying || gameState.gameOver) return; 
     
-    gameState.gameOver = true; // Blocca subito gli update del gioco
+    player.isDying = true;
+    player.deathFrame = 0;
+    player.frameTimer = 0;
     
-    stopAllSounds(); // Ferma i passi e il volo
-    
+    stopAllSounds(); 
     sfx.death.currentTime = 0;
-    sfx.death.play(); // Fai partire il suono di morte
-    
-    // Opzionale: ritarda di un secondo la comparsa del tasto "Riprova"
-    // così il giocatore ha il tempo di sentire il suono e capire cosa è successo
-    setTimeout(() => {
-        showRetryButton();
-    }, 1000);
+    sfx.death.play(); 
 }
+
 
 function getTile(px, py) {
     const tx = Math.floor(px / config.tileSize), ty = Math.floor(py / config.tileSize);
@@ -344,6 +350,7 @@ function updateLavaParticles(deltaMultiplier = 1) {
     });
 }
 
+
 function update(dt) {
     if (gameState.gameOver || gameState.won) {
         sfx.walk.pause();
@@ -351,7 +358,34 @@ function update(dt) {
         return;
     }
 
+
+
+
+if (gameState.gameOver || gameState.won) {
+        sfx.walk.pause();
+        sfx.fly.pause();
+        return;
+    }
+
+    // --- GESTIONE ANIMAZIONE MORTE ---
+    if (player.isDying) {
+        player.frameTimer += dt * 30;
+        if (player.frameTimer > 8) { // Velocità animazione morte
+            player.frameTimer = 0;
+            player.deathFrame++;
+            if (player.deathFrame >= 8) { 
+                gameState.gameOver = true;
+                showRetryButton();
+            }
+        }
+        return; // Ferma movimento, fisica e perdita power
+    }
+
     // === GESTIONE COOLDOWN DANNO ===
+
+
+
+
     // Diminuisce il tempo di invulnerabilità se attivo
     if (player.damageCooldown > 0) {
         player.damageCooldown -= dt;
@@ -539,27 +573,50 @@ function winLevel(d) {
 
 // --- RENDERING ---
 function drawPlayer() {
-    const img = sprites.thes;
-    if (!img || !img.complete) return;
+    let img, sx, sy, sw, sh;
 
-    // EFFETTO LAMPEGGIO SE COLPITO
-    if (player.damageCooldown > 0) {
-        // Lampeggia ogni 0.1 secondi
-        if (Math.floor(Date.now() / 100) % 2 === 0) return; 
+    if (player.isDying) {
+        img = sprites.thes_die;
+        if (!img || !img.complete) return;
+
+        // Griglia 4 colonne x 2 righe (700x400)
+        const cols = 4;
+        const rows = 2;
+        
+        sw = img.naturalWidth / cols;
+        sh = img.naturalHeight / rows;
+        
+        sx = (player.deathFrame % cols) * sw;
+        sy = Math.floor(player.deathFrame / cols) * sh;
+
+    } else {
+        img = sprites.thes;
+        if (!img || !img.complete) return;
+
+        // EFFETTO LAMPEGGIO SE COLPITO
+        if (player.damageCooldown > 0) {
+            if (Math.floor(Date.now() / 100) % 2 === 0) return; 
+        }
+
+        const cellW = img.naturalWidth / 4;
+        const cellH = img.naturalHeight / 4;
+        const trimX = 120; 
+        const trimY = 18;  
+
+        sx = (player.frameIndex * cellW) + trimX;
+        sy = (player.animState * cellH) + trimY;
+        sw = cellW - (trimX * 2);
+        sh = cellH - (trimY * 2);
     }
 
-    const cellW = img.naturalWidth / 4;
-    const cellH = img.naturalHeight / 4;
-    const trimX = 120; 
-    const trimY = 18;  
+let dx = player.x * config.zoom - camera.x;
+let dy = player.y * config.zoom - camera.y;
 
-    const sx = (player.frameIndex * cellW) + trimX;
-    const sy = (player.animState * cellH) + trimY;
-    const sw = cellW - (trimX * 2);
-    const sh = cellH - (trimY * 2);
+// Abbassa animazione morte
+if (player.isDying) {
+    dy += 3 * config.zoom; // prova 10, 15, 18, 20 finché è perfetto
+}
 
-    const dx = player.x * config.zoom - camera.x;
-    const dy = player.y * config.zoom - camera.y;
     const dw = player.w * config.zoom;
     const dh = player.h * config.zoom;
 
