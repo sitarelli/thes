@@ -276,7 +276,7 @@ function respawnPlayer() {
 function playerDie() { 
     if (gameState.gameOver) return; // Evita chiamate multiple
     sfx.death.play(); // <--- AGGIUNTO
-    playSound('die'); 
+    // playSound('die'); 
     gameState.gameOver = true; 
     stopAllSounds();
     showRetryButton();
@@ -448,7 +448,7 @@ function update(dt) {
                 gameState.power -= ENEMY_HIT_DAMAGE;
                 sfx.contact.currentTime = 0; // Reset per sovrapposizioni veloci
                 sfx.contact.play();        // <--- AGGIUNTO
-                playSound('hit'); // Suono colpo (ex die)
+                // playSound('hit'); // Suono colpo (ex die)
                 player.damageCooldown = 2.0; // 1 secondo di invulnerabilità
                 
                 // Controllo morte immediato
@@ -479,7 +479,7 @@ function update(dt) {
     items.forEach(item => { 
         if (!item.taken && rectIntersect(player, item, false)) { 
             item.taken = true; 
-            if (item.type === 'key') { gameState.hasKey = true; sfx.keyPickup.play(); playSound('key'); }
+            if (item.type === 'key') { gameState.hasKey = true; sfx.keyPickup.play(); }
             else if (item.type === 'bulb') { restorePower(0.5); gameState.bulbs++; playSound('bonus'); }
             else if (item.type === 'star') { restorePower(0.25); gameState.stars++; playSound('bonus'); }
             else if (item.type === 'flag') { gameState.flags++; playSound('bonus'); }
