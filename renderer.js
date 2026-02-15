@@ -249,38 +249,44 @@ function drawDustParticles() {
     });
 }
 
-function drawFireworkParticles() {
+export function drawFireworkParticles() {
     fireworkParticles.forEach(p => {
-        // Applica oscillazione se presente (cuoricini vittoria)
-        let offsetX = 0;
-        if (p.oscillation !== undefined) {
-            p.oscillation += p.oscillationSpeed;
-            offsetX = Math.sin(p.oscillation) * 10; // Oscilla ±10px
-        }
-        
-        const px = (p.x + offsetX) * config.zoom - camera.x;
-        const py = p.y * config.zoom - camera.y;
+        // Se la particella è svanita, non la disegniamo
+        if (p.life <= 0) return;
         
         ctx.save();
-        ctx.globalAlpha = p.life; // Dissolvenza graduale
-        ctx.translate(px, py);
-        ctx.rotate(p.rotation);
         
-        // Disegna emoji
-        ctx.font = `${p.size * config.zoom}px Arial`; // Scala con zoom
+        // Calcola la posizione esatta considerando lo zoom e la camera
+        const screenX = (p.x * config.zoom) - camera.x;
+        const screenY = (p.y * config.zoom) - camera.y;
+        
+        ctx.translate(screenX, screenY);
+        ctx.rotate(p.rotation || 0);
+        
+        // IL SEGRETO È QUI: Usa la dimensione dinamica (p.size) che abbiamo impostato in player.js!
+        // Prima probabilmente era bloccata su un numero fisso enorme.
+        ctx.font = `${p.size * config.zoom}px "Segoe UI Emoji", Arial, sans-serif`; 
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         
-        // Shadow/glow per effetto brillante
-        ctx.shadowBlur = 15;
-        ctx.shadowColor = 'rgba(255, 192, 203, 0.8)'; // Rosa per cuori
+        // FADE OUT MORBIDO: Le particelle svaniscono dolcemente mentre salgono
+        ctx.globalAlpha = Math.max(0, p.life);
         
+        // EFFETTO GLOW: Se è un cuore (isHeart) fa un bagliore rosa, altrimenti bianco
+        if (p.isHeart) {
+            ctx.shadowColor = 'rgba(255, 105, 180, 0.8)'; // Rosa brillante
+            ctx.shadowBlur = 15;
+        } else {
+            ctx.shadowColor = '#ffffff';
+            ctx.shadowBlur = 10;
+        }
+        
+        // Disegna l'emoji del cuore
         ctx.fillText(p.emoji, 0, 0);
         
         ctx.restore();
     });
 }
-
 // Particelle colorate (da React)
 function drawColorParticles() {
     colorParticles.forEach(p => {

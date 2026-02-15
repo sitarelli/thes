@@ -4,7 +4,7 @@
 
 import { config, gameState, player, setCurrentLevelNumber, setGameRunning, setCurrentMap, setItems, setEnemies, setTriggers, setDecorations, setLavas, setLavaParticles, setDustParticles, setFireworkParticles, setColorParticles, currentLevelNumber, gameRunning } from './config.js';
 import { initInput, requestFullscreen, setFullscreenActivated } from './input.js';
-import { update, respawnPlayer, createVictoryHearts } from './player.js';
+import { update, respawnPlayer, createColorParticles } from './player.js';
 import { initRenderer, draw, updateHUD, randomizeBrickColor } from './renderer.js';
 
 // Canvas setup
@@ -356,18 +356,14 @@ function loop(timestamp) {
         accumulator -= config.fixedTimeStep;
     }
     
-    // Genera cuoricini rosa che salgono durante la vittoria
+    // Genera particelle colorate CONTINUE durante la vittoria (come lava)
     if (gameState.won && gameState.vX && gameState.vY) {
-        fireworkTimer += deltaTime;
-        if (fireworkTimer > 0.2) { // Ogni 0.2s
-            fireworkTimer = 0;
-            // Cuoricini che partono dalla coppia
+        if (Math.random() < 0.3) { // 30% probabilità ogni frame = molto frequenti
             const centerX = gameState.vX + gameState.vW / 2;
             const centerY = gameState.vY + gameState.vH / 2;
-            createVictoryHearts(centerX, centerY);
+            // 8-12 particelle multicolore per burst
+            createColorParticles(centerX, centerY, 8 + Math.floor(Math.random() * 4), 'collect');
         }
-    } else {
-        fireworkTimer = 0;
     }
     
     draw(gameRunning);
@@ -376,9 +372,14 @@ function loop(timestamp) {
 }
 
 // RETRY BUTTON
+
 function showRetryButton() {
+    // Rimuove la classe per far riapparire il mouse!
+    document.body.classList.remove('game-active'); 
+    
     const oldBtn = document.getElementById('retry-btn');
     if (oldBtn) oldBtn.remove();
+
     const btn = document.createElement('button');
     btn.id = 'retry-btn';
     btn.textContent = 'RIPROVA';
@@ -403,8 +404,12 @@ function showRetryButton() {
 }
 
 function restartGame() {
+    // Nasconde di nuovo il mouse per il gameplay
+    document.body.classList.add('game-active'); 
+    
     const btn = document.getElementById('retry-btn');
     if (btn) btn.remove();
+
     
     gameState.gameOver = false;
     gameState.power = gameState.maxPower; 

@@ -87,7 +87,7 @@ export function createDustParticles() {
             vx: (Math.random() - 0.5) * 0.8 - player.facing * 0.3, // Si muove indietro rispetto alla direzione
             vy: -Math.random() * 0.4 - 0.1,
             life: 1.0,
-            size: Math.random() * 2.5 + 1,
+            size: Math.random() * 3.5 + 2.5,
             color: 'rgba(150, 150, 150, 0.6)'
         });
     }
@@ -121,7 +121,7 @@ export function createColorParticles(x, y, count, type = 'collect') {
             vy: (Math.random() - 0.5) * 15,
             life: 1,
             color: colors[Math.floor(Math.random() * colors.length)],
-            size: Math.random() * 2.5 + 1
+            size: Math.random() * 1.5 + 0.5
         });
     }
 }
@@ -156,91 +156,6 @@ export function updateCameraShake() {
     }
 }
 
-// Esplosione GIGANTE che copre TUTTO LO SCHERMO - genera da più punti
-export function createVictoryFirework(centerX, centerY) {
-    const emojis = ['💕', '❤️', '💖', '⭐', '✨', '💫', '🌟', '💗', '💝', '💘', '🎉', '🎊', '🎆'];
-    
-    // Crea esplosioni da 5 punti diversi per coprire tutto lo schermo
-    const explosionPoints = [
-        { x: centerX, y: centerY }, // Centro
-        { x: centerX - 150, y: centerY - 100 }, // Alto sinistra
-        { x: centerX + 150, y: centerY - 100 }, // Alto destra
-        { x: centerX - 150, y: centerY + 100 }, // Basso sinistra
-        { x: centerX + 150, y: centerY + 100 }  // Basso destra
-    ];
-    
-    explosionPoints.forEach(point => {
-        // 15-20 particelle per punto = 75-100 totali
-        const numParticles = 15 + Math.floor(Math.random() * 5);
-        
-        for (let i = 0; i < numParticles; i++) {
-            // Angolo casuale a 360 gradi
-            const angle = (Math.PI * 2 * i / numParticles) + (Math.random() * 0.5);
-            
-            // Velocità ALTISSIMA per coprire tutto
-            const speed = 10 + Math.random() * 12; // 10-22 pixel/frame
-            
-            fireworkParticles.push({
-                x: point.x,
-                y: point.y,
-                vx: Math.cos(angle) * speed,
-                vy: Math.sin(angle) * speed,
-                life: 1.0,
-                emoji: emojis[Math.floor(Math.random() * emojis.length)],
-                size: 40 + Math.random() * 30, // ENORMI: 40-70px
-                rotation: Math.random() * Math.PI * 2,
-                rotationSpeed: (Math.random() - 0.5) * 0.2
-            });
-        }
-    });
-}
-
-export function updateFireworkParticles(deltaMultiplier = 1) {
-    // Filtra particelle morte
-    const filtered = fireworkParticles.filter(p => p.life > 0);
-    fireworkParticles.length = 0;
-    fireworkParticles.push(...filtered);
-    
-    fireworkParticles.forEach(p => {
-        p.x += p.vx * deltaMultiplier;
-        p.y += p.vy * deltaMultiplier;
-        
-        // Gravità minima per tenerle in aria
-        p.vy += 0.02 * deltaMultiplier;
-        
-        // Dissolvenza lenta
-        p.life -= 0.005 * deltaMultiplier;
-        
-        // Rotazione
-        p.rotation += p.rotationSpeed * deltaMultiplier;
-        
-        // Attrito minimo
-        p.vx *= Math.pow(0.99, deltaMultiplier);
-        p.vy *= Math.pow(0.99, deltaMultiplier);
-    });
-}
-
-// ===== CUORICINI VITTORIA (Rising Hearts Effect) =====
-export function createVictoryHearts(centerX, centerY) {
-    // Genera 8-12 cuoricini che salgono
-    const numHearts = 8 + Math.floor(Math.random() * 4);
-    
-    for (let i = 0; i < numHearts; i++) {
-        fireworkParticles.push({
-            x: centerX + (Math.random() - 0.5) * 60, // Spread orizzontale
-            y: centerY,
-            vx: (Math.random() - 0.5) * 1, // Leggero movimento laterale
-            vy: -2 - Math.random() * 2, // Sale verso l'alto
-            life: 1.0,
-            emoji: ['💕', '❤️', '💖', '💗', '💝'][Math.floor(Math.random() * 5)],
-            size: 25 + Math.random() * 15, // 25-40px
-            rotation: 0,
-            rotationSpeed: 0,
-            oscillation: Math.random() * Math.PI * 2, // Per movimento ondulato
-            oscillationSpeed: 0.05 + Math.random() * 0.05
-        });
-    }
-}
 
 export function winLevel(d, currentLevelNumber, loadLevelScript) { 
     gameState.won = true; 
@@ -400,11 +315,6 @@ export function update(dt, showRetryButtonCallback, currentLevelNumber, loadLeve
     updateColorParticles(); // Aggiorna particelle colorate (senza moltiplicatore)
     updateCameraShake(); // Aggiorna camera shake
     
-    // Aggiorna fuochi d'artificio anche durante il gioco (per vittoria)
-    if (gameState.won) {
-        updateFireworkParticles(dt * 60);
-    }
-    
     // === NEMICI: MOVIMENTO E DANNO ===
     const ENEMY_HIT_DAMAGE = 0.25;
 
@@ -523,10 +433,11 @@ export function update(dt, showRetryButtonCallback, currentLevelNumber, loadLeve
     decorations.forEach(d => { 
         if (d.type === 'woman' && rectIntersect(player, d, false) && gameState.hasKey) {
             if (!gameState.won) {
-                // ESPLOSIONE DI PARTICELLE COLORATE!!
                 const womanCenterX = d.x + d.w / 2;
                 const womanCenterY = d.y + d.h / 2;
-                createColorParticles(womanCenterX, womanCenterY, 40, 'collect'); // 40 particelle!
+                
+                // Esplosione iniziale di particelle colorate
+                createColorParticles(womanCenterX, womanCenterY, 50, 'collect'); 
                 
                 winLevel(d, currentLevelNumber, loadLevelScript); 
             }
