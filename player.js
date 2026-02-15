@@ -166,8 +166,16 @@ export function winLevel(d, currentLevelNumber, loadLevelScript) {
     gameState.vH = d.h;
     
     sfx.walk.pause(); 
-    sfx.fly.pause(); 
-    safePlayAudio(sfx.levelup);
+    sfx.fly.pause();
+    
+    // FIX iOS: Assicurati che levelup sia completamente fermo prima di suonare
+    sfx.levelup.pause();
+    sfx.levelup.currentTime = 0;
+    
+    // Piccolo delay per iOS
+    setTimeout(() => {
+        safePlayAudio(sfx.levelup);
+    }, 50);
     
     setTimeout(() => {
         // FIX iOS: Fade out graduale invece di pause brusco
@@ -428,16 +436,22 @@ export function update(dt, showRetryButtonCallback, currentLevelNumber, loadLeve
             if (trig.type === 'open') { 
                 triggers.forEach(door => {
                     if (door.type === 'door' && door.group === trig.group && !door.open) {
-                        door.open = true; 
-                        safePlayAudio(sfx.doorOpen);
+                        door.open = true;
+                        // FIX iOS: Controlla che sia in pausa prima di suonare
+                        if (sfx.doorOpen.paused) {
+                            safePlayAudio(sfx.doorOpen);
+                        }
                     }
                 });
             } 
             if (trig.type === 'close') { 
                 triggers.forEach(door => {
                     if (door.type === 'door' && door.group === trig.group && door.open) {
-                        door.open = false; 
-                        safePlayAudio(sfx.doorClose);
+                        door.open = false;
+                        // FIX iOS: Controlla che sia in pausa prima di suonare
+                        if (sfx.doorClose.paused) {
+                            safePlayAudio(sfx.doorClose);
+                        }
                     }
                 });
             } 
