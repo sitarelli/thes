@@ -12,8 +12,6 @@ let brickColorOverlay = 'rgba(70, 60, 50, 0.3)'; // Overlay colore casuale
 
 // Cache per sfondo (ottimizzazione performance)
 let bgCanvas = null;
-let lastCameraX = 0;
-let lastCameraY = 0;
 
 export function initRenderer(canvasElement, contextElement, spritesData) {
     canvas = canvasElement;
@@ -475,43 +473,29 @@ export function draw(gameRunning) {
     
     // OTTIMIZZAZIONE: Disegna pattern di mattoni come sfondo con CACHE
     if (brickPattern) {
-        // Ridisegna sfondo solo se camera si è mossa significativamente (> 10px)
-        const cameraMovedX = Math.abs(camera.x - lastCameraX);
-        const cameraMovedY = Math.abs(camera.y - lastCameraY);
-        
-        if (!bgCanvas || cameraMovedX > 10 || cameraMovedY > 10) {
-            // Crea canvas cache se non esiste
-            if (!bgCanvas) {
-                bgCanvas = document.createElement('canvas');
-                bgCanvas.width = config.viewportWidth + 400;
-                bgCanvas.height = config.viewportHeight + 400;
-            }
+        // Crea canvas cache se non esiste (UNA VOLTA SOLA)
+        if (!bgCanvas) {
+            bgCanvas = document.createElement('canvas');
+            bgCanvas.width = config.viewportWidth + 800;
+            bgCanvas.height = config.viewportHeight + 800;
             
             const bgCtx = bgCanvas.getContext('2d');
             
-            // Calcola offset del pattern per allinearlo
-            const patternOffsetX = -(camera.x % 200);
-            const patternOffsetY = -(camera.y % 200);
-            
-            bgCtx.save();
-            bgCtx.translate(patternOffsetX, patternOffsetY);
-            
-            // Disegna pattern sulla cache
+            // Disegna pattern sulla cache (pattern si ripete automaticamente)
             bgCtx.fillStyle = brickPattern;
-            bgCtx.fillRect(-patternOffsetX, -patternOffsetY, bgCanvas.width, bgCanvas.height);
+            bgCtx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
             
             // Overlay colore
             bgCtx.fillStyle = brickColorOverlay;
-            bgCtx.fillRect(-patternOffsetX, -patternOffsetY, bgCanvas.width, bgCanvas.height);
-            
-            bgCtx.restore();
-            
-            lastCameraX = camera.x;
-            lastCameraY = camera.y;
+            bgCtx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
         }
         
-        // Disegna cache allineata alla camera
-        ctx.drawImage(bgCanvas, -200, -200);
+        // Calcola posizione dello sfondo basata sulla camera (pattern size = 200px)
+        const bgX = -(camera.x % 200) - 400;
+        const bgY = -(camera.y % 200) - 400;
+        
+        // Disegna cache alla posizione corretta (SEMPRE AGGIORNATA)
+        ctx.drawImage(bgCanvas, bgX, bgY);
         
         // Overlay scuro per non disturbare il gameplay
         ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';

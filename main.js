@@ -380,9 +380,21 @@ function loop(timestamp) {
     if (deltaTime > 0.25) deltaTime = 0.25;
     
     accumulator += deltaTime;
-    while (accumulator >= config.fixedTimeStep) {
+    
+    // OTTIMIZZAZIONE: Limita update per frame per non bloccare rendering
+    // Invece di while infinito, max 3 update per frame
+    let updatesThisFrame = 0;
+    const maxUpdatesPerFrame = 3;
+    
+    while (accumulator >= config.fixedTimeStep && updatesThisFrame < maxUpdatesPerFrame) {
         update(config.fixedTimeStep, showRetryButton, currentLevelNumber, loadLevelScript); 
         accumulator -= config.fixedTimeStep;
+        updatesThisFrame++;
+    }
+    
+    // Se accumulator è ancora troppo alto, resettalo per evitare spiral of death
+    if (accumulator > config.fixedTimeStep * 5) {
+        accumulator = 0;
     }
     
     // Genera particelle colorate CONTINUE durante la vittoria (come lava)
