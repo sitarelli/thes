@@ -3,7 +3,7 @@
 /* -------------------------------------------------------------------------- */
 
 const config = {
-    viewportWidth: 740,
+    viewportWidth: 940,
     viewportHeight: 510,
     baseGravity: 0.45,
     baseSpeed: 15.0,

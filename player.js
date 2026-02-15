@@ -227,8 +227,11 @@ export function update(dt, showRetryButtonCallback, currentLevelNumber, loadLeve
     
     // Generiamo i punti orizzontali dinamicamente (Sensori Muri)
     const hPoints = [0.1];
-    for (let p = config.tileSize - 2; p < player.h - 1; p += config.tileSize - 2) {
-        hPoints.push(p); 
+    // SAFETY CHECK: evitiamo loop infiniti se tileSize non è ancora inizializzato
+    if (config.tileSize > 2) {
+        for (let p = config.tileSize - 2; p < player.h - 1; p += config.tileSize - 2) {
+            hPoints.push(p); 
+        }
     }
     hPoints.push(player.h - 0.1);
 
@@ -262,8 +265,11 @@ export function update(dt, showRetryButtonCallback, currentLevelNumber, loadLeve
     // Generiamo i punti verticali dinamicamente (Sensori Pavimento/Soffitto)
     const margin = 4; 
     const wPoints = [margin];
-    for (let p = margin + config.tileSize - 2; p < player.w - margin; p += config.tileSize - 2) {
-        wPoints.push(p);
+    // SAFETY CHECK: evitiamo loop infiniti se tileSize non è ancora inizializzato
+    if (config.tileSize > 2) {
+        for (let p = margin + config.tileSize - 2; p < player.w - margin; p += config.tileSize - 2) {
+            wPoints.push(p);
+        }
     }
     wPoints.push(player.w - margin);
 

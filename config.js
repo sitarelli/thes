@@ -2,16 +2,41 @@
 /* CONFIGURAZIONE E COSTANTI GLOBALI                                          */
 /* -------------------------------------------------------------------------- */
 
+// Rilevazione mobile migliorata (controlla user agent E dimensioni schermo E touch support)
+function detectMobile() {
+    const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    const isSmallScreen = window.innerWidth <= 1024; // tablet/mobile
+    
+    const result = (isMobileUA || hasTouch) && isSmallScreen;
+    console.log('🔍 Rilevazione Mobile:', {
+        hasTouch,
+        isMobileUA,
+        isSmallScreen,
+        screenWidth: window.innerWidth,
+        isMobile: result,
+        viewport: result ? '960x540 (16:9)' : '740x510 (4:3)',
+        zoomApplicato: result ? 1.5 : 1
+    });
+    return result;
+}
+
+export const isMobile = detectMobile();
+
+// Viewport dinamico: widescreen 16:9 su mobile, 4:3 su desktop
+const viewportWidth = isMobile ? 1490 : 1000;   // Più largo su mobile
+const viewportHeight = isMobile ? 540 : 580;  // Formato 16:9 su mobile
+
 export const config = {
-    viewportWidth: 740,
-    viewportHeight: 510,
+    viewportWidth,
+    viewportHeight,
     baseGravity: 0.45,
     baseSpeed: 15.0,
     baseThrust: -0.80,
     maxFallSpeed: 4.6,
     maxFlySpeed: -0.36,
     enemySpeedMultiplier: 0.15,
-    zoom: 1, 
+    zoom: isMobile ? 1.5 : 1,  // 50% di zoom in più su mobile
     tileSize: 0,
     hitboxMargin: 0.25,
     fixedTimeStep: 1/60

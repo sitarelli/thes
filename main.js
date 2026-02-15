@@ -2,7 +2,7 @@
 /* MAIN - ENTRY POINT DEL GIOCO                                               */
 /* -------------------------------------------------------------------------- */
 
-import { config, gameState, player, setCurrentLevelNumber, setGameRunning, setCurrentMap, setItems, setEnemies, setTriggers, setDecorations, setLavas, setLavaParticles, setDustParticles, setFireworkParticles, setColorParticles, currentLevelNumber, gameRunning } from './config.js';
+import { config, gameState, player, setCurrentLevelNumber, setGameRunning, setCurrentMap, setItems, setEnemies, setTriggers, setDecorations, setLavas, setLavaParticles, setDustParticles, setFireworkParticles, setColorParticles, currentLevelNumber, gameRunning, isMobile } from './config.js';
 import { initInput, requestFullscreen, setFullscreenActivated } from './input.js';
 import { update, respawnPlayer, createColorParticles } from './player.js';
 import { initRenderer, draw, updateHUD, randomizeBrickColor } from './renderer.js';
@@ -10,6 +10,22 @@ import { initRenderer, draw, updateHUD, randomizeBrickColor } from './renderer.j
 // Canvas setup
 const canvas = document.getElementById('game-canvas');
 const ctx = canvas.getContext('2d');
+
+// Debug zoom e viewport
+console.log('🎮 Setup Canvas:', {
+    viewport: `${config.viewportWidth}x${config.viewportHeight}`,
+    zoom: config.zoom,
+    formato: isMobile ? '16:9 widescreen' : '4:3 standard'
+});
+
+
+// Mostra hint F11 solo su desktop
+if (!isMobile) {
+    const hint = document.createElement('div');
+    hint.textContent = 'PREMI F11 PER ANDARE A SCHERMO INTERO';
+    hint.style.cssText = 'text-align: center; margin-top: 10px; font-size: 12px; color: #888; font-family: Orbitron, sans-serif;';
+    document.getElementById('game-container').appendChild(hint);
+}
 
 const dpr = window.devicePixelRatio || 1;
 canvas.width = config.viewportWidth * dpr;
@@ -238,7 +254,20 @@ function initGame(levelData) {
     
     setCurrentMap(JSON.parse(JSON.stringify(levelData.map)));
     config.tileSize = levelData.tileSize || 20;
-    config.zoom = config.viewportHeight / (23 * config.tileSize);
+    
+    // Calcola zoom base
+    const baseZoom = config.viewportHeight / (23 * config.tileSize);
+    
+    // Applica moltiplicatore mobile (1.5x su mobile, 1x su desktop)
+    const mobileMultiplier = isMobile ? 1.5 : 1.0;
+    config.zoom = baseZoom * mobileMultiplier;
+    
+    console.log('🔧 Zoom calcolato:', {
+        baseZoom: baseZoom.toFixed(2),
+        mobileMultiplier,
+        zoomFinale: config.zoom.toFixed(2),
+        tileSize: config.tileSize
+    });
     
     const tempItems = [];
     const tempEnemies = [];
