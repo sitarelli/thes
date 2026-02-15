@@ -6,11 +6,11 @@ const config = {
     viewportWidth: 740,
     viewportHeight: 510,
     baseGravity: 0.45,
-    baseSpeed: 12.0,
+    baseSpeed: 15.0,
     baseThrust: -0.80,
     maxFallSpeed: 4.6,
-    maxFlySpeed: -0.26,
-    enemySpeedMultiplier: 0.14,
+    maxFlySpeed: -0.36,
+    enemySpeedMultiplier: 0.15,
     zoom: 1, 
     tileSize: 0,
     hitboxMargin: 0.25,
@@ -19,8 +19,22 @@ const config = {
 
 const canvas = document.getElementById('game-canvas');
 const ctx = canvas.getContext('2d');
-canvas.width = config.viewportWidth;
-canvas.height = config.viewportHeight;
+
+// 1. Calcola la densità di pixel dello schermo (es. 2 su iPhone, 1 su vecchi monitor)
+const dpr = window.devicePixelRatio || 1;
+
+// 2. Imposta la risoluzione INTERNA maggiorata per schermi HD
+canvas.width = config.viewportWidth * dpr;
+canvas.height = config.viewportHeight * dpr;
+
+// 3. Forza la risoluzione VISIVA tramite CSS per non sballare il layout
+canvas.style.width = `${config.viewportWidth}px`;
+canvas.style.height = `${config.viewportHeight}px`;
+
+// 4. Scala il contesto per compensare la densità
+ctx.scale(dpr, dpr);
+
+// Manteniamo il tuo amato antialias!
 ctx.imageSmoothingEnabled = true;
 
 // --- SPRITES ---
@@ -435,7 +449,7 @@ if (gameState.gameOver || gameState.won) {
     }
 
     // === POWER EROSION (THESEUS CORE MECHANIC) ===
-    const POWER_DRAIN_PER_SECOND = 0.015; 
+    const POWER_DRAIN_PER_SECOND = 0.003; 
     gameState.power -= POWER_DRAIN_PER_SECOND * dt;
     
     // Controllo morte per erosione naturale
@@ -447,23 +461,40 @@ if (gameState.gameOver || gameState.won) {
     
     
     
-    // MOVIMENTO PLAYER
+ 
+
+
+
+// === 1. MOVIMENTO ORIZZONTALE E COLLISIONI LATERALI ===
     const speed = config.baseSpeed * config.tileSize * dt;
-    const grav = config.baseGravity * config.tileSize * dt;
-    const thr = config.baseThrust * config.tileSize * dt;
-    
     if (keys.right) { player.vx = speed; player.facing = 1; } 
     else if (keys.left) { player.vx = -speed; player.facing = -1; } 
     else player.vx = 0;
 
     player.x += player.vx;
-    const points = [0, player.h/2, player.h-1];
-    for(let p of points) {
-        if (player.vx > 0 && getTile(player.x + player.w, player.y + p)) player.x = Math.floor((player.x + player.w)/config.tileSize)*config.tileSize - player.w - 0.1;
-        if (player.vx < 0 && getTile(player.x, player.y + p)) player.x = (Math.floor(player.x/config.tileSize)+1)*config.tileSize;
+    
+    // Generiamo i punti orizzontali dinamicamente (Sensori Muri)
+    const hPoints = [0.1];
+    for (let p = config.tileSize - 2; p < player.h - 1; p += config.tileSize - 2) {
+        hPoints.push(p); 
+    }
+    hPoints.push(player.h - 0.1);
+
+    for (let p of hPoints) {
+        if (player.vx > 0 && getTile(player.x + player.w, player.y + p)) {
+            player.x = Math.floor((player.x + player.w) / config.tileSize) * config.tileSize - player.w - 0.01;
+            player.vx = 0;
+        }
+        if (player.vx < 0 && getTile(player.x, player.y + p)) {
+            player.x = (Math.floor(player.x / config.tileSize) + 1) * config.tileSize + 0.01;
+            player.vx = 0;
+        }
     }
 
-    // --- NUOVA LOGICA DI VOLO MODIFICATA ---
+    // === 2. MOVIMENTO VERTICALE E COLLISIONI PAVIMENTO/SOFFITTO ===
+    const grav = config.baseGravity * config.tileSize * dt;
+    const thr = config.baseThrust * config.tileSize * dt;
+    
     if (keys.up && player.canFly) {
         player.vy += thr;
     } 
@@ -472,19 +503,27 @@ if (gameState.gameOver || gameState.won) {
     const mF = config.maxFallSpeed * config.tileSize, mY = config.maxFlySpeed * config.tileSize;
     if (player.vy > mF) player.vy = mF; 
     if (player.vy < mY) player.vy = mY;
+    
     player.y += player.vy;
 
-    const wPoints = [0, player.w-1];
-    for(let p of wPoints) {
-        // COLLISIONE SOFFITTO
+    // Generiamo i punti verticali dinamicamente (Sensori Pavimento/Soffitto)
+    const margin = 4; 
+    const wPoints = [margin];
+    for (let p = margin + config.tileSize - 2; p < player.w - margin; p += config.tileSize - 2) {
+        wPoints.push(p);
+    }
+    wPoints.push(player.w - margin);
+
+    for (let p of wPoints) {
+        // COLLISIONE SOFFITTO (Testa)
         if (player.vy < 0 && getTile(player.x + p, player.y)) { 
-            player.y = (Math.floor(player.y/config.tileSize)+1)*config.tileSize; 
+            player.y = (Math.floor(player.y / config.tileSize) + 1) * config.tileSize; 
             player.vy = 0; 
             player.canFly = false; 
         }
-        // COLLISIONE PAVIMENTO
+        // COLLISIONE PAVIMENTO (Piedi)
         if (player.vy > 0 && getTile(player.x + p, player.y + player.h)) { 
-            player.y = Math.floor((player.y+player.h)/config.tileSize)*config.tileSize - player.h; 
+            player.y = Math.floor((player.y + player.h) / config.tileSize) * config.tileSize - player.h; 
             player.vy = 0; 
             player.canFly = true; 
         }
@@ -814,9 +853,25 @@ function draw() {
 
     drawLavaParticles();
 
-    function drawImg(img, x, y, wS, hS) { 
-        const sx = x*config.zoom-camera.x, sy = y*config.zoom-camera.y, sw = config.tileSize*config.zoom*wS, sh = config.tileSize*config.zoom*hS; 
-        if(img && img.complete) ctx.drawImage(img, sx, sy, sw, sh); 
+function drawImg(img, x, y, wS, hS, flip = false) { 
+        const sx = x*config.zoom-camera.x;
+        const sy = y*config.zoom-camera.y;
+        const sw = config.tileSize*config.zoom*wS;
+        const sh = config.tileSize*config.zoom*hS;
+        
+        if(img && img.complete) {
+            if (flip) {
+                // Salva lo stato, sposta il punto di origine, specchia l'asse X e disegna
+                ctx.save();
+                ctx.translate(sx + sw, sy);
+                ctx.scale(-1, 1);
+                ctx.drawImage(img, 0, 0, sw, sh);
+                ctx.restore();
+            } else {
+                // Disegno standard
+                ctx.drawImage(img, sx, sy, sw, sh);
+            }
+        }
     }
 
     items.forEach(i => { 
@@ -832,14 +887,33 @@ function draw() {
         }
     });
 
-    enemies.forEach(en => {
+
+
+enemies.forEach(en => {
         let sprite = sprites.enemyH; 
-        if (en.type === 'H') sprite = sprites.enemyH;
-        else if (en.type === 'V') sprite = sprites.enemyV;
-        else if (en.type === 'S') sprite = sprites.enemyS;
-        else if (en.type === 'X') sprite = sprites.enemyX;
-        drawImg(sprite, en.x, en.y, en.w/config.tileSize, en.h/config.tileSize);
+        let flipDirection = false; // Di default non specchiamo
+
+        if (en.type === 'H') {
+            sprite = sprites.enemyH;
+            // La PNG guarda a destra. Se va a sinistra (vx negativo), la specchio.
+            if (en.vx < 0) flipDirection = true;
+        }
+        else if (en.type === 'V') {
+            sprite = sprites.enemyV;
+        }
+        else if (en.type === 'S') {
+            sprite = sprites.enemyS;
+        }
+        else if (en.type === 'X') {
+            sprite = sprites.enemyX;
+            // La PNG guarda a sinistra. Se va a destra (vx positivo), la specchio.
+            if (en.vx > 0) flipDirection = true;
+        }
+        
+        // Passiamo il parametro flipDirection alla nuova funzione drawImg
+        drawImg(sprite, en.x, en.y, en.w/config.tileSize, en.h/config.tileSize, flipDirection);
     });
+
     
     if (!gameState.won) {
         drawPlayer();
@@ -855,7 +929,12 @@ function draw() {
         }
     }
 
+// Da mettere nella funzione di disegno del player
+
+
     if (gameState.gameOver) { 
+ctx.strokeStyle = "red";
+ctx.strokeRect(player.x, player.y, player.width, player.height);
         ctx.fillStyle = 'rgba(50, 0, 0, 0.85)'; 
         ctx.fillRect(0, 0, canvas.width, canvas.height); 
         ctx.fillStyle = '#fff'; 
