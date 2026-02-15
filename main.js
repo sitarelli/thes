@@ -84,6 +84,13 @@ sfx.fly.loop = true;
 sfx.walk.volume = 0.4;
 sfx.fly.volume = 0.5;
 
+// FIX iOS: Preload esplicito per tutti gli audio
+Object.values(sfx).forEach(audio => {
+    audio.preload = 'auto';
+    // iOS richiede che gli audio siano "pronti" per funzionare
+    audio.load();
+});
+
 let loadedAudio = 0;
 const audioToLoad = Object.keys(sfx).length;
 
@@ -182,11 +189,26 @@ export function playSound(type) {
 
 export function safePlayAudio(audio) {
     if (!audio) return;
-    audio.currentTime = 0;
+    
+    // FIX iOS: Assicurati che l'audio sia caricato prima di resettare currentTime
+    if (audio.readyState >= 2) { // HAVE_CURRENT_DATA
+        audio.currentTime = 0;
+    }
+    
     const playPromise = audio.play();
     if (playPromise !== undefined) {
         playPromise.catch(err => {
-            if (err.name !== 'NotAllowedError') console.warn('Audio error:', err);
+            // FIX iOS: Retry una volta se fallisce
+            if (err.name === 'NotAllowedError') {
+                console.warn('Audio blocked by browser policy');
+            } else if (err.name === 'AbortError') {
+                // Retry dopo breve delay
+                setTimeout(() => {
+                    audio.play().catch(e => console.warn('Audio retry failed:', e));
+                }, 100);
+            } else {
+                console.warn('Audio error:', err);
+            }
         });
     }
 }

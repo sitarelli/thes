@@ -169,8 +169,16 @@ export function winLevel(d, currentLevelNumber, loadLevelScript) {
     sfx.fly.pause(); 
     safePlayAudio(sfx.levelup);
     
-    setTimeout(() => { 
-        sfx.levelup.pause(); 
+    setTimeout(() => {
+        // FIX iOS: Fade out graduale invece di pause brusco
+        if (sfx.levelup && !sfx.levelup.paused) {
+            sfx.levelup.volume = Math.max(0, sfx.levelup.volume - 0.1);
+            if (sfx.levelup.volume > 0.1) {
+                setTimeout(() => sfx.levelup.pause(), 200);
+            } else {
+                sfx.levelup.pause();
+            }
+        }
         loadLevelScript(currentLevelNumber + 1); 
     }, 5000); 
 }
