@@ -496,6 +496,23 @@ const tapOverlay = document.getElementById('tap-to-start');
 function startGame() {
     if (audioCtx.state === 'suspended') audioCtx.resume();
     
+    // FIX iOS: Forza caricamento COMPLETO di tutti gli audio al primo tap
+    // Questo risolve il problema di audio "pigri" su iOS
+    Object.values(sfx).forEach(audio => {
+        if (audio.readyState < 4) { // HAVE_ENOUGH_DATA
+            audio.load();
+        }
+        // "Prime" ogni audio riproducendolo a volume 0 per 1ms
+        // iOS richiede questo trucco per sbloccare completamente l'audio
+        const originalVolume = audio.volume;
+        audio.volume = 0;
+        audio.play().then(() => {
+            audio.pause();
+            audio.currentTime = 0;
+            audio.volume = originalVolume;
+        }).catch(() => {}); // Ignora errori
+    });
+    
     safePlayAudio(sfx.beginLevel);
     
     // Nascondi cursore durante il gioco
