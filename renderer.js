@@ -10,6 +10,11 @@ let sprites = {};
 let brickPattern = null; // Pattern di mattoni per lo sfondo
 let brickColorOverlay = 'rgba(70, 60, 50, 0.3)'; // Overlay colore casuale
 
+// Cache per sfondo (ottimizzazione performance)
+let bgCanvas = null;
+let lastCameraX = 0;
+let lastCameraY = 0;
+
 export function initRenderer(canvasElement, contextElement, spritesData) {
     canvas = canvasElement;
     ctx = contextElement;
@@ -24,6 +29,9 @@ export function randomizeBrickColor() {
         'rgba(85, 60, 55, 0.35)',  // Marrone-Grigio-Rosso
     ];
     brickColorOverlay = colorStyles[Math.floor(Math.random() * colorStyles.length)];
+    
+    // OTTIMIZZAZIONE: Reset cache sfondo quando cambia livello
+    bgCanvas = null;
 }
 
 // Genera un pattern di mattoni irregolari casuali (UNA VOLTA SOLA)
@@ -302,6 +310,9 @@ function drawColorParticles() {
 }
 
 export function createLavaParticles(lava) {
+    // OTTIMIZZAZIONE: limita particelle per migliorare performance
+    if (lavaParticles.length > 200) return;
+    
     if (Math.random() < 0.05) {
         lavaParticles.push({
             x: lava.x + Math.random() * lava.w,
@@ -462,34 +473,61 @@ export function draw(gameRunning) {
         return; 
     }
     
-    // Disegna pattern di mattoni come sfondo - FISSO CON LA CAMERA
+    // OTTIMIZZAZIONE: Disegna pattern di mattoni come sfondo con CACHE
     if (brickPattern) {
-        ctx.save();
-        ctx.translate(-camera.x, -camera.y);
-        ctx.fillStyle = brickPattern;
+        // Ridisegna sfondo solo se camera si è mossa significativamente (> 10px)
+        const cameraMovedX = Math.abs(camera.x - lastCameraX);
+        const cameraMovedY = Math.abs(camera.y - lastCameraY);
         
-        const worldLeft = camera.x - 100;
-        const worldTop = camera.y - 100;
-        const worldWidth = config.viewportWidth + 200;
-        const worldHeight = config.viewportHeight + 200;
+        if (!bgCanvas || cameraMovedX > 10 || cameraMovedY > 10) {
+            // Crea canvas cache se non esiste
+            if (!bgCanvas) {
+                bgCanvas = document.createElement('canvas');
+                bgCanvas.width = config.viewportWidth + 400;
+                bgCanvas.height = config.viewportHeight + 400;
+            }
+            
+            const bgCtx = bgCanvas.getContext('2d');
+            
+            // Calcola offset del pattern per allinearlo
+            const patternOffsetX = -(camera.x % 200);
+            const patternOffsetY = -(camera.y % 200);
+            
+            bgCtx.save();
+            bgCtx.translate(patternOffsetX, patternOffsetY);
+            
+            // Disegna pattern sulla cache
+            bgCtx.fillStyle = brickPattern;
+            bgCtx.fillRect(-patternOffsetX, -patternOffsetY, bgCanvas.width, bgCanvas.height);
+            
+            // Overlay colore
+            bgCtx.fillStyle = brickColorOverlay;
+            bgCtx.fillRect(-patternOffsetX, -patternOffsetY, bgCanvas.width, bgCanvas.height);
+            
+            bgCtx.restore();
+            
+            lastCameraX = camera.x;
+            lastCameraY = camera.y;
+        }
         
-        ctx.fillRect(worldLeft, worldTop, worldWidth, worldHeight);
-        
-        // OVERLAY COLORE CASUALE
-        ctx.fillStyle = brickColorOverlay;
-        ctx.fillRect(worldLeft, worldTop, worldWidth, worldHeight);
-        
-        ctx.restore();
+        // Disegna cache allineata alla camera
+        ctx.drawImage(bgCanvas, -200, -200);
         
         // Overlay scuro per non disturbare il gameplay
         ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
         ctx.fillRect(0, 0, config.viewportWidth, config.viewportHeight);
     }
     
-    // Mappa (mattoni del gioco)
-    for (let y = 0; y < currentMap.length; y++) {
-        for (let x = 0; x < currentMap[y].length; x++) {
-            if (currentMap[y][x] === 1) {
+    // OTTIMIZZAZIONE: Mappa (disegna solo tile visibili - culling)
+    const tileZoom = config.tileSize * config.zoom;
+    const startX = Math.max(0, Math.floor(camera.x / tileZoom));
+    const endX = Math.min(currentMap[0]?.length || 0, Math.ceil((camera.x + config.viewportWidth) / tileZoom) + 1);
+    const startY = Math.max(0, Math.floor(camera.y / tileZoom));
+    const endY = Math.min(currentMap.length, Math.ceil((camera.y + config.viewportHeight) / tileZoom) + 1);
+    
+    for (let y = startY; y < endY; y++) {
+        for (let x = startX; x < endX; x++) {
+            if (currentMap[y] && currentMap[y][x] === 1) {
                 drawImg(sprites.brick, x * config.tileSize, y * config.tileSize, 1, 1);
             }
         }
