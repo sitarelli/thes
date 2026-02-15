@@ -381,10 +381,10 @@ function loop(timestamp) {
     
     accumulator += deltaTime;
     
-    // OTTIMIZZAZIONE: Limita update per frame per non bloccare rendering
-    // Invece di while infinito, max 3 update per frame
+    // OTTIMIZZAZIONE MOBILE: Meno update su mobile per migliori FPS
+    // Mobile: max 2 update/frame, Desktop: max 3 update/frame
     let updatesThisFrame = 0;
-    const maxUpdatesPerFrame = 3;
+    const maxUpdatesPerFrame = isMobile ? 2 : 3;
     
     while (accumulator >= config.fixedTimeStep && updatesThisFrame < maxUpdatesPerFrame) {
         update(config.fixedTimeStep, showRetryButton, currentLevelNumber, loadLevelScript); 

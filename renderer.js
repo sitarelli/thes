@@ -2,7 +2,7 @@
 /* RENDERING E DISEGNO                                                        */
 /* -------------------------------------------------------------------------- */
 
-import { config, player, gameState, camera, currentMap, items, enemies, lavas, triggers, decorations, lavaParticles, dustParticles, fireworkParticles, colorParticles, lavaAnimTime } from './config.js';
+import { config, player, gameState, camera, currentMap, items, enemies, lavas, triggers, decorations, lavaParticles, dustParticles, fireworkParticles, colorParticles, lavaAnimTime, isMobile } from './config.js';
 
 let ctx = null;
 let canvas = null;
@@ -308,10 +308,13 @@ function drawColorParticles() {
 }
 
 export function createLavaParticles(lava) {
-    // OTTIMIZZAZIONE: limita particelle per migliorare performance
-    if (lavaParticles.length > 200) return;
+    // OTTIMIZZAZIONE MOBILE: Riduce particelle drasticamente su mobile
+    const maxParticles = isMobile ? 100 : 200;
+    const spawnChance = isMobile ? 0.025 : 0.05;
     
-    if (Math.random() < 0.05) {
+    if (lavaParticles.length > maxParticles) return;
+    
+    if (Math.random() < spawnChance) {
         lavaParticles.push({
             x: lava.x + Math.random() * lava.w,
             y: lava.y + lava.h - 2,
@@ -471,17 +474,17 @@ export function draw(gameRunning) {
         return; 
     }
     
-    // OTTIMIZZAZIONE: Disegna pattern di mattoni come sfondo con CACHE
+    // SFONDO FISSO: Disegna pattern di mattoni (completamente statico)
     if (brickPattern) {
         // Crea canvas cache se non esiste (UNA VOLTA SOLA)
         if (!bgCanvas) {
             bgCanvas = document.createElement('canvas');
-            bgCanvas.width = config.viewportWidth + 800;
-            bgCanvas.height = config.viewportHeight + 800;
+            bgCanvas.width = config.viewportWidth;
+            bgCanvas.height = config.viewportHeight;
             
             const bgCtx = bgCanvas.getContext('2d');
             
-            // Disegna pattern sulla cache (pattern si ripete automaticamente)
+            // Disegna pattern sulla cache
             bgCtx.fillStyle = brickPattern;
             bgCtx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
             
@@ -490,12 +493,8 @@ export function draw(gameRunning) {
             bgCtx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
         }
         
-        // Calcola posizione dello sfondo basata sulla camera (pattern size = 200px)
-        const bgX = -(camera.x % 200) - 400;
-        const bgY = -(camera.y % 200) - 400;
-        
-        // Disegna cache alla posizione corretta (SEMPRE AGGIORNATA)
-        ctx.drawImage(bgCanvas, bgX, bgY);
+        // Disegna sfondo FISSO (mai si muove)
+        ctx.drawImage(bgCanvas, 0, 0);
         
         // Overlay scuro per non disturbare il gameplay
         ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
