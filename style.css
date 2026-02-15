@@ -39,6 +39,15 @@ body {
     position: fixed;
 }
 
+/* Nascondi cursore durante il gioco */
+body.game-active {
+    cursor: none;
+}
+
+body.game-active * {
+    cursor: none !important;
+}
+
 /* ============================================
    ROTATE OVERLAY
    ============================================ */
