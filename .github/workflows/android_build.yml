@@ -18,14 +18,21 @@ jobs:
         with:
           node-version: '20'
 
+      # Creiamo un package.json base se non esiste, per evitare errori di npm
+      - name: Prepara ambiente
+        run: |
+          if [ ! -f package.json ]; then
+            npm init -y
+          fi
+
       - name: Installazione dipendenze e Capacitor
         run: |
-          npm install
           npm install @capacitor/core @capacitor/cli @capacitor/android
-          npx cap init "MioGioco" "com.esempio.gioco" --web-dir .
 
-      - name: Aggiungi Android e Copia file
+      - name: Inizializza Capacitor e Android
         run: |
+          # Usiamo --confirm per saltare i prompt interattivi
+          npx cap init "MioGioco" "com.esempio.gioco" --web-dir .
           npx cap add android
           npx cap copy android
 
