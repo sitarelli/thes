@@ -1,0 +1,38 @@
+/* -------------------------------------------------------------------------- */
+/* FIX TAP OVERLAY per Capacitor - Da aggiungere al CSS                       */
+/* -------------------------------------------------------------------------- */
+
+/* Assicura che tap-to-start sia SOPRA tutto */
+#tap-to-start {
+    z-index: 999999 !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    pointer-events: auto !important;
+    touch-action: none !important; /* Previeni scroll accidentali */
+}
+
+#tap-to-start.show {
+    display: flex !important;
+    pointer-events: auto !important;
+}
+
+/* Assicura che rotate-message sia nascosto in Capacitor */
+body.capacitor-app #rotate-message {
+    display: none !important;
+}
+
+/* Previeni interferenze di altri elementi */
+#tap-to-start * {
+    pointer-events: auto !important;
+}
+
+/* Fix per touch area del bottone */
+.tap-button {
+    cursor: pointer;
+    -webkit-tap-highlight-color: rgba(255, 255, 255, 0.3);
+    user-select: none;
+    -webkit-user-select: none;
+}
