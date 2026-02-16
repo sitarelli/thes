@@ -34,11 +34,12 @@ jobs:
           npx cap add android
           npx cap copy android
 
-      - name: Forza Orientamento Landscape
-        run: |
-          sed -i 's/android:configChanges="[^"]*"/& android:screenOrientation="landscape"/' android/app/src/main/AndroidManifest.xml
 
-      # --- ECCO IL PASSAGGIO NINJA PER RISOLVERE IL CONFLITTO ---
+- name: Forza Orientamento Landscape
+        run: |
+          sed -i 's/android:name="MainActivity"/android:name="MainActivity" android:screenOrientation="sensorLandscape"/' android/app/src/main/AndroidManifest.xml
+          
+
       - name: Fix Kotlin Duplicate Classes
         run: |
           cat <<EOF >> android/app/build.gradle
