@@ -6,6 +6,7 @@ import { config, gameState, player, setCurrentLevelNumber, setGameRunning, setCu
 import { initInput, requestFullscreen, setFullscreenActivated } from './input.js';
 import { update, respawnPlayer, createColorParticles } from './player.js';
 import { initRenderer, draw, updateHUD, randomizeBrickColor } from './renderer.js';
+import { audioManager } from './audio-manager.js';
 
 // Canvas setup
 const canvas = document.getElementById('game-canvas');
@@ -66,8 +67,6 @@ imagesToLoad.forEach(imgData => {
 });
 
 // --- AUDIO MANAGER ---
-import { audioManager } from './audio-manager.js';
-
 // Inizia caricamento audio
 let audioLoaded = false;
 let audioLoadedCount = 0;
