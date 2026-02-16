@@ -20,7 +20,7 @@ console.log('🎮 Setup Canvas:', {
 
 
 // Mostra hint F11 solo su desktop
-if (!/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+if (!isMobile) {
     const hint = document.createElement('div');
     hint.textContent = 'PREMI F11 PER ANDARE A SCHERMO INTERO';
     hint.style.cssText = 'text-align: center; margin-top: 10px; font-size: 12px; color: #888; font-family: Orbitron, sans-serif;';
@@ -65,84 +65,45 @@ imagesToLoad.forEach(imgData => {
     sprites[imgData.name] = img;
 });
 
-// --- AUDIO CON FALLBACK OGG → MP3 ---
-const audioDefinitions = {
-    doorOpen: { files: ['audio/dooropen.ogg', 'audio/dooropen.mp3'], volume: 0.6 },
-    doorClose: { files: ['audio/doorclose.ogg', 'audio/doorclose.mp3'], volume: 0.6 },
-    walk: { files: ['audio/walkingthes.ogg', 'audio/walkingthes.mp3'], volume: 0.4, loop: true },
-    fly: { files: ['audio/flyingthes.ogg', 'audio/flyingthes.m4a'], volume: 0.5, loop: true },
-    levelup: { files: ['audio/levelup.ogg', 'audio/levelup.mp3'], volume: 0.7 },
-    beginLevel: { files: ['audio/beginlevel.ogg', 'audio/beginlevel.mp3'], volume: 0.7 },
-    keyPickup: { files: ['audio/key.ogg', 'audio/key.mp3'], volume: 0.6 },
-    death: { files: ['audio/death.ogg', 'audio/death.mp3'], volume: 0.7 },
-    contact: { files: ['audio/contact.ogg', 'audio/contact.mp3'], volume: 0.6 },
-    lava: { files: ['audio/lava.ogg', 'audio/lava.mp3'], volume: 0.5 }
+// --- AUDIO ---
+export const sfx = {
+    doorOpen: new Audio('audio/dooropen.mp3'),
+    doorClose: new Audio('audio/doorclose.mp3'),
+    walk: new Audio('audio/walkingthes.mp3'),
+    fly: new Audio('audio/flyingthes.m4a'),
+    levelup: new Audio('audio/levelup.mp3'),
+    beginLevel: new Audio('audio/beginlevel.mp3'),
+    keyPickup: new Audio('audio/key.mp3'),
+    death: new Audio('audio/death.mp3'),
+    contact: new Audio('audio/contact.mp3'),
+    lava: new Audio('audio/lava.mp3')
 };
 
-export const sfx = {};
-let loadedAudio = 0;
-const audioToLoad = Object.keys(audioDefinitions).length;
+sfx.walk.loop = true;
+sfx.fly.loop = true;
+sfx.walk.volume = 0.4;
+sfx.fly.volume = 0.5;
 
-// Funzione per caricare un audio con fallback multi-formato
-function loadAudioWithFallback(name, config) {
-    const audio = new Audio();
-    audio.volume = config.volume || 1.0;
-    audio.loop = config.loop || false;
+// FIX iOS: Preload esplicito per tutti gli audio
+Object.values(sfx).forEach(audio => {
     audio.preload = 'auto';
-    
-    let formatIndex = 0;
-    
-    const tryNextFormat = () => {
-        if (formatIndex >= config.files.length) {
-            console.warn(`⚠️ Audio ${name} non caricato (tutti i formati falliti)`);
-            sfx[name] = null;
-            loadedAudio++;
-            updateProgress();
-            return;
-        }
-        
-        const src = config.files[formatIndex];
-        audio.src = src;
-        
-        const timeout = setTimeout(() => {
-            console.warn(`⏱️ Timeout ${src}, provo successivo...`);
-            formatIndex++;
-            tryNextFormat();
-        }, 2000);
-        
-        const onSuccess = () => {
-            clearTimeout(timeout);
-            console.log(`✅ Audio ${name} caricato: ${src}`);
-            sfx[name] = audio;
-            loadedAudio++;
-            updateProgress();
-            cleanup();
-        };
-        
-        const onError = () => {
-            clearTimeout(timeout);
-            console.warn(`❌ Errore ${src}`);
-            formatIndex++;
-            tryNextFormat();
-            cleanup();
-        };
-        
-        const cleanup = () => {
-            audio.removeEventListener('canplaythrough', onSuccess);
-            audio.removeEventListener('error', onError);
-        };
-        
-        audio.addEventListener('canplaythrough', onSuccess, { once: true });
-        audio.addEventListener('error', onError, { once: true });
-        audio.load();
-    };
-    
-    tryNextFormat();
-}
+    // iOS richiede che gli audio siano "pronti" per funzionare
+    audio.load();
+});
 
-// Carica tutti gli audio
-Object.entries(audioDefinitions).forEach(([name, config]) => {
-    loadAudioWithFallback(name, config);
+let loadedAudio = 0;
+const audioToLoad = Object.keys(sfx).length;
+
+Object.values(sfx).forEach(audio => {
+    const onLoad = () => {
+        loadedAudio++;
+        updateProgress();
+        audio.removeEventListener('canplaythrough', onLoad);
+        audio.removeEventListener('error', onLoad);
+    };
+    audio.addEventListener('canplaythrough', onLoad, { once: true });
+    audio.addEventListener('error', onLoad, { once: true });
+    audio.load();
 });
 
 // PROGRESS BAR
@@ -277,7 +238,7 @@ export function loadLevelScript(n) {
     if (old) old.remove();
     const s = document.createElement('script'); 
     s.id = 'level-script'; 
-    s.src = `levels/level${n}.js`;
+    s.src = `level${n}.js`;
     s.onerror = () => { 
         if (n === 1) gameState.statusMessage = "Manca level1.js"; 
         else drawVictoryScreen(); 
@@ -580,10 +541,22 @@ function startGame() {
 
 if (tapOverlay) {
     tapOverlay.classList.add('show');
+    
+    // ANDROID/CAPACITOR FIX: usa touchstart (più affidabile di touchend)
+    tapOverlay.addEventListener('touchstart', function(e) { 
+        console.log('👆 Touch rilevato');
+        e.preventDefault();
+        e.stopPropagation();
+        startGame(); 
+    }, { passive: false, capture: true });
+    
+    // Mantieni anche touchend come fallback
     tapOverlay.addEventListener('touchend', function(e) { 
         e.preventDefault(); 
         startGame(); 
     }, { passive: false });
+    
+    // Click per desktop
     tapOverlay.addEventListener('click', function(e) { 
         e.preventDefault(); 
         startGame(); 
