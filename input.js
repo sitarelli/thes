@@ -101,7 +101,21 @@ function isIOS() {
     return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream; 
 }
 
+// Rileva se siamo in un'app Capacitor (APK)
+function isCapacitor() {
+    return window.Capacitor !== undefined;
+}
+
 function checkOrientation() {
+    // SE SIAMO IN APK (Capacitor), NON mostrare l'overlay rotazione
+    // perché l'orientamento è già forzato dal manifest
+    if (isCapacitor()) {
+        const rotateMsg = document.getElementById('rotate-message');
+        if (rotateMsg) rotateMsg.style.display = 'none';
+        return;
+    }
+    
+    // SOLO su browser web: mostra overlay se verticale
     const rotateMsg = document.getElementById('rotate-message');
     if (rotateMsg && window.innerWidth < 900) {
         if (window.innerHeight > window.innerWidth) rotateMsg.style.display = 'flex';
@@ -129,6 +143,9 @@ function initOrientation() {
 let fullscreenActivated = false;
 
 export function requestFullscreen() {
+    // NON richiedere fullscreen se siamo in APK (è già fullscreen)
+    if (isCapacitor()) return;
+    
     const elem = document.documentElement;
     if (isMobileDevice()) {
         if (elem.requestFullscreen) {
