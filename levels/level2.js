@@ -1,5 +1,10 @@
 /* LEGENDA: 1=Muro 2=Lava 3=Woman 6=Door 7=Flag 8=Bulb 9=Thes 10=Key 12=Star 16=Timer 11,13,14,15=Enemies */
-loadLevelData({
+
+// ← AGGIUNGO SOLO QUESTA RIGA
+import { loadLevel } from '../main.js';
+
+// ← CAMBIO loadLevelData in loadLevel (sotto)
+loadLevel({
     tileSize: 9, 
     cols: 55,
     rows: 35,
@@ -40,4 +45,5 @@ loadLevelData({
         [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,8,8,8,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
         [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
     ]
+
 });
