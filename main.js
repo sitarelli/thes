@@ -277,7 +277,7 @@ export function loadLevelScript(n) {
     if (old) old.remove();
     const s = document.createElement('script'); 
     s.id = 'level-script'; 
-    s.src = `level${n}.js`;
+    s.src = `levels/level${n}.js`;
     s.onerror = () => { 
         if (n === 1) gameState.statusMessage = "Manca level1.js"; 
         else drawVictoryScreen(); 
