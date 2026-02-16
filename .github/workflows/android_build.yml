@@ -34,7 +34,23 @@ jobs:
           npx cap add android
           npx cap copy android
 
-      # ECCO LA MODIFICA: Passiamo a Java 21
+      # --- ECCO IL PASSAGGIO NINJA PER RISOLVERE IL CONFLITTO ---
+      - name: Fix Kotlin Duplicate Classes
+        run: |
+          cat <<EOF >> android/app/build.gradle
+          
+          dependencies {
+              modules {
+                  module("org.jetbrains.kotlin:kotlin-stdlib-jdk7") {
+                      replacedBy("org.jetbrains.kotlin:kotlin-stdlib", "kotlin-stdlib-jdk7 is now part of kotlin-stdlib")
+                  }
+                  module("org.jetbrains.kotlin:kotlin-stdlib-jdk8") {
+                      replacedBy("org.jetbrains.kotlin:kotlin-stdlib", "kotlin-stdlib-jdk8 is now part of kotlin-stdlib")
+                  }
+              }
+          }
+          EOF
+
       - name: Setup Java (JDK 21)
         uses: actions/setup-java@v4
         with:
