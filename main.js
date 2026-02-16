@@ -65,78 +65,109 @@ imagesToLoad.forEach(imgData => {
     sprites[imgData.name] = img;
 });
 
-// --- AUDIO ---
-export const sfx = {
-    doorOpen: new Audio('audio/dooropen.mp3'),
-    doorClose: new Audio('audio/doorclose.mp3'),
-    walk: new Audio('audio/walkingthes.mp3'),
-    fly: new Audio('audio/flyingthes.m4a'),
-    levelup: new Audio('audio/levelup.mp3'),
-    beginLevel: new Audio('audio/beginlevel.mp3'),
-    keyPickup: new Audio('audio/key.mp3'),
-    death: new Audio('audio/death.mp3'),
-    contact: new Audio('audio/contact.mp3'),
-    lava: new Audio('audio/lava.mp3')
-};
+// --- AUDIO MANAGER ---
+import { audioManager } from './audio-manager.js';
 
-sfx.walk.loop = true;
-sfx.fly.loop = true;
-sfx.walk.volume = 0.4;
-sfx.fly.volume = 0.5;
+// Inizia caricamento audio
+let audioLoaded = false;
+let audioLoadedCount = 0;
+let audioTotalCount = 0;
 
-// FIX iOS: Preload esplicito per tutti gli audio
-Object.values(sfx).forEach(audio => {
-    audio.preload = 'auto';
-    // iOS richiede che gli audio siano "pronti" per funzionare
-    audio.load();
-});
-
-let loadedAudio = 0;
-const audioToLoad = Object.keys(sfx).length;
-
-Object.values(sfx).forEach(audio => {
-    const onLoad = () => {
-        loadedAudio++;
+audioManager.loadAll(
+    (loaded, total, percent) => {
+        // Callback progresso
+        audioLoadedCount = loaded;
+        audioTotalCount = total;
         updateProgress();
-        audio.removeEventListener('canplaythrough', onLoad);
-        audio.removeEventListener('error', onLoad);
-    };
-    audio.addEventListener('canplaythrough', onLoad, { once: true });
-    audio.addEventListener('error', onLoad, { once: true });
-    audio.load();
-});
+    },
+    () => {
+        // Callback completamento
+        audioLoaded = true;
+        console.log('✅ Audio pronti!');
+        updateProgress();
+    }
+);
+
+// Export per retrocompatibilità (wrapper)
+export const sfx = {
+    get doorOpen() { return audioManager.sounds.doorOpen; },
+    get doorClose() { return audioManager.sounds.doorClose; },
+    get walk() { return audioManager.sounds.walk; },
+    get fly() { return audioManager.sounds.fly; },
+    get levelup() { return audioManager.sounds.levelup; },
+    get beginLevel() { return audioManager.sounds.beginLevel; },
+    get keyPickup() { return audioManager.sounds.keyPickup; },
+    get death() { return audioManager.sounds.death; },
+    get contact() { return audioManager.sounds.contact; },
+    get lava() { return audioManager.sounds.lava; }
+};
 
 // PROGRESS BAR
 function updateProgress() {
-    const total = imagesToLoad.length + audioToLoad;
-    const loaded = loadedImages + loadedAudio;
+    const total = imagesToLoad.length + audioTotalCount;
+    const loaded = loadedImages + audioLoadedCount;
     const percent = Math.floor((loaded / total) * 100);
+    
+    // Aggiorna UI di loading
+    const loadingBar = document.getElementById('loading-progress-bar');
+    const loadingText = document.getElementById('loading-text');
+    const loadingDetails = document.getElementById('loading-details');
+    
+    if (loadingBar) loadingBar.style.width = `${percent}%`;
+    if (loadingText) loadingText.textContent = `Loading: ${percent}%`;
+    if (loadingDetails) {
+        loadingDetails.textContent = `Assets: ${loaded}/${total} (Images: ${loadedImages}/${imagesToLoad.length}, Audio: ${audioLoadedCount}/${audioTotalCount})`;
+    }
+    
+    // Debug info per tap overlay (quando loading è completo)
     const debugInfo = document.getElementById('debug-info');
-    if (debugInfo) debugInfo.textContent = `Caricamento: ${percent}%`;
+    if (debugInfo) {
+        debugInfo.textContent = `Loading: ${percent}% (${loaded}/${total})`;
+    }
+    
     checkStart();
 }
 
 function checkStart() { 
-    const total = imagesToLoad.length + audioToLoad;
-    const loaded = loadedImages + loadedAudio;
-    if (loaded === total) {
+    const total = imagesToLoad.length + audioTotalCount;
+    const loaded = loadedImages + audioLoadedCount;
+    
+    if (loaded === total && audioLoaded) {
+        // Tutto caricato!
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const loadingText = document.getElementById('loading-text');
         const debugInfo = document.getElementById('debug-info');
-        if (debugInfo) debugInfo.textContent = 'Pronto! 🎮';
+        
+        if (loadingText) loadingText.textContent = '✅ Ready!';
+        if (debugInfo) debugInfo.textContent = 'Ready! 🎮 Tap to start';
+        
+        // Nascondi loading overlay dopo 500ms
+        setTimeout(() => {
+            if (loadingOverlay) {
+                loadingOverlay.classList.add('hidden');
+                setTimeout(() => {
+                    loadingOverlay.style.display = 'none';
+                }, 500);
+            }
+        }, 500);
+        
         loadLevelScript(1);
     }
 }
 
-// Audio Context
-const AudioContext = window.AudioContext || window.webkitAudioContext;
-const audioCtx = new AudioContext();
-
 export function playSound(type) {
-    if (audioCtx.state === 'suspended') audioCtx.resume();
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    osc.connect(gain); 
-    gain.connect(audioCtx.destination);
-    const now = audioCtx.currentTime;
+    // Usa l'AudioContext del manager
+    if (audioManager.audioContext) {
+        if (audioManager.audioContext.state === 'suspended') {
+            audioManager.audioContext.resume();
+        }
+        
+        const ctx = audioManager.audioContext;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain); 
+        gain.connect(ctx.destination);
+        const now = ctx.currentTime;
     
     if (type === 'bonus') { 
         osc.frequency.setValueAtTime(600, now); 
@@ -189,35 +220,31 @@ export function playSound(type) {
 
 export function safePlayAudio(audio) {
     if (!audio) return;
+    audioManager.initAudioContext();
     
-    // FIX iOS: Assicurati che l'audio sia caricato prima di resettare currentTime
-    if (audio.readyState >= 2) { // HAVE_CURRENT_DATA
+    // Usa il metodo robusto del manager
+    if (audio.readyState >= 2) {
         audio.currentTime = 0;
     }
     
     const playPromise = audio.play();
     if (playPromise !== undefined) {
         playPromise.catch(err => {
-            // FIX iOS: Retry una volta se fallisce
             if (err.name === 'NotAllowedError') {
-                console.warn('Audio blocked by browser policy');
+                console.warn('🔇 Audio bloccato da policy browser');
             } else if (err.name === 'AbortError') {
-                // Retry dopo breve delay
                 setTimeout(() => {
-                    audio.play().catch(e => console.warn('Audio retry failed:', e));
-                }, 100);
+                    audio.play().catch(e => console.warn('Retry fallito:', e));
+                }, 50);
             } else {
-                console.warn('Audio error:', err);
+                console.warn('Errore audio:', err);
             }
         });
     }
 }
 
 export function stopAllSounds() {
-    Object.values(sfx).forEach(audio => {
-        audio.pause();
-        audio.currentTime = 0;
-    });
+    audioManager.stopAll();
 }
 
 // Inizializza renderer
@@ -494,24 +521,8 @@ let fullscreenActivated = false;
 const tapOverlay = document.getElementById('tap-to-start');
 
 function startGame() {
-    if (audioCtx.state === 'suspended') audioCtx.resume();
-    
-    // FIX iOS: Forza caricamento COMPLETO di tutti gli audio al primo tap
-    // Questo risolve il problema di audio "pigri" su iOS
-    Object.values(sfx).forEach(audio => {
-        if (audio.readyState < 4) { // HAVE_ENOUGH_DATA
-            audio.load();
-        }
-        // "Prime" ogni audio riproducendolo a volume 0 per 1ms
-        // iOS richiede questo trucco per sbloccare completamente l'audio
-        const originalVolume = audio.volume;
-        audio.volume = 0;
-        audio.play().then(() => {
-            audio.pause();
-            audio.currentTime = 0;
-            audio.volume = originalVolume;
-        }).catch(() => {}); // Ignora errori
-    });
+    // Inizializza e sblocca audio (FONDAMENTALE per iOS/Android)
+    audioManager.unlock();
     
     safePlayAudio(sfx.beginLevel);
     
