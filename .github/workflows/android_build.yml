@@ -30,7 +30,7 @@ jobs:
 
       - name: Inizializza Capacitor e Android
         run: |
-          npx cap init "MioGioco" "com.esempio.gioco" --web-dir www
+          npx cap init "Icarous" "com.icarous.gioco" --web-dir www
           npx cap add android
           npx cap copy android
 
