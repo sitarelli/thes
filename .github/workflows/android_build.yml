@@ -1,7 +1,10 @@
 name: Build Android APK
 on:
   push:
-    branches: [ main ] # o 'master' se la tua branch principale si chiama così
+    branches:
+      - main
+      - master
+  workflow_dispatch: # Questo aggiunge un pulsante per farlo partire a mano!
 
 jobs:
   build:
