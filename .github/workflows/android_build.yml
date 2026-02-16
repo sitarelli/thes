@@ -1,1 +1,45 @@
+name: Build Android APK
+on:
+  push:
+    branches: [ main ] # o 'master' se la tua branch principale si chiama così
 
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout del codice
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/checkout@v3
+        with:
+          node-version: '18'
+
+      - name: Installazione dipendenze e Capacitor
+        run: |
+          npm install
+          npm install @capacitor/core @capacitor/cli @capacitor/android
+          npx cap init "MioGioco" "com.esempio.gioco" --web-dir . # Se i file sono nella cartella principale usa .
+
+      - name: Aggiungi Android e Copia file
+        run: |
+          npx cap add android
+          npx cap copy android
+
+      - name: Setup Java (necessario per compilare)
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Build APK (Gradle)
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - name: Carica APK come Artefatto
+        uses: actions/upload-artifact@v3
+        with:
+          name: gioco-debug-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
