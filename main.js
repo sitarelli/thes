@@ -1,12 +1,11 @@
 /* -------------------------------------------------------------------------- */
-/* MAIN - ENTRY POINT DEL GIOCO                                               */
+/* MAIN - ENTRY POINT DEL GIOCO (VERSIONE BUNDLE - AUDIO INCORPORATO)        */
 /* -------------------------------------------------------------------------- */
 
 import { config, gameState, player, setCurrentLevelNumber, setGameRunning, setCurrentMap, setItems, setEnemies, setTriggers, setDecorations, setLavas, setLavaParticles, setDustParticles, setFireworkParticles, setColorParticles, currentLevelNumber, gameRunning, isMobile } from './config.js';
 import { initInput, requestFullscreen, setFullscreenActivated } from './input.js';
 import { update, respawnPlayer, createColorParticles } from './player.js';
 import { initRenderer, draw, updateHUD, randomizeBrickColor } from './renderer.js';
-import { audioManager } from './audio-manager.js';
 
 // Canvas setup
 const canvas = document.getElementById('game-canvas');
@@ -66,7 +65,212 @@ imagesToLoad.forEach(imgData => {
     sprites[imgData.name] = img;
 });
 
-// --- AUDIO MANAGER ---
+/* ==========================================================================
+   AUDIO MANAGER - INCORPORATO (NO FILE SEPARATO)
+   ========================================================================== */
+
+class AudioManager {
+    constructor() {
+        this.sounds = {};
+        this.audioContext = null;
+        this.loadedCount = 0;
+        this.totalCount = 0;
+        this.onProgressCallback = null;
+        this.onCompleteCallback = null;
+        
+        // Definizione suoni con formati multipli (fallback automatico)
+        this.soundDefinitions = {
+            doorOpen: { files: ['audio/dooropen.ogg', 'audio/dooropen.mp3'], volume: 0.6 },
+            doorClose: { files: ['audio/doorclose.ogg', 'audio/doorclose.mp3'], volume: 0.6 },
+            walk: { files: ['audio/walkingthes.ogg', 'audio/walkingthes.mp3'], volume: 0.4, loop: true },
+            fly: { files: ['audio/flyingthes.ogg', 'audio/flyingthes.m4a'], volume: 0.5, loop: true },
+            levelup: { files: ['audio/levelup.ogg', 'audio/levelup.mp3'], volume: 0.7 },
+            beginLevel: { files: ['audio/beginlevel.ogg', 'audio/beginlevel.mp3'], volume: 0.7 },
+            keyPickup: { files: ['audio/key.ogg', 'audio/key.mp3'], volume: 0.6 },
+            death: { files: ['audio/death.ogg', 'audio/death.mp3'], volume: 0.7 },
+            contact: { files: ['audio/contact.ogg', 'audio/contact.mp3'], volume: 0.6 },
+            lava: { files: ['audio/lava.ogg', 'audio/lava.mp3'], volume: 0.5 }
+        };
+        
+        this.totalCount = Object.keys(this.soundDefinitions).length;
+    }
+    
+    initAudioContext() {
+        if (!this.audioContext) {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            this.audioContext = new AudioContext();
+        }
+        if (this.audioContext.state === 'suspended') {
+            this.audioContext.resume();
+        }
+        return this.audioContext;
+    }
+    
+    loadAll(onProgress, onComplete) {
+        this.onProgressCallback = onProgress;
+        this.onCompleteCallback = onComplete;
+        this.loadedCount = 0;
+        
+        console.log('🔊 Inizio caricamento audio...');
+        
+        Object.entries(this.soundDefinitions).forEach(([name, config]) => {
+            this.loadSound(name, config);
+        });
+    }
+    
+    loadSound(name, config) {
+        const audio = new Audio();
+        audio.volume = config.volume || 1.0;
+        audio.loop = config.loop || false;
+        audio.preload = 'auto';
+        
+        let currentFormatIndex = 0;
+        const tryNextFormat = () => {
+            if (currentFormatIndex >= config.files.length) {
+                console.warn(`⚠️ Impossibile caricare ${name}`);
+                this.onSoundLoaded(name, null);
+                return;
+            }
+            
+            const src = config.files[currentFormatIndex];
+            console.log(`🎵 Caricamento: ${name} → ${src}`);
+            
+            audio.src = src;
+            
+            const timeout = setTimeout(() => {
+                console.warn(`⏱️ Timeout ${src}`);
+                currentFormatIndex++;
+                tryNextFormat();
+            }, 2000);
+            
+            const onSuccess = () => {
+                clearTimeout(timeout);
+                console.log(`✅ OK: ${name}`);
+                this.onSoundLoaded(name, audio);
+                cleanup();
+            };
+            
+            const onError = () => {
+                clearTimeout(timeout);
+                console.warn(`❌ Errore ${src}`);
+                currentFormatIndex++;
+                tryNextFormat();
+                cleanup();
+            };
+            
+            const cleanup = () => {
+                audio.removeEventListener('canplaythrough', onSuccess);
+                audio.removeEventListener('error', onError);
+            };
+            
+            audio.addEventListener('canplaythrough', onSuccess, { once: true });
+            audio.addEventListener('error', onError, { once: true });
+            audio.load();
+        };
+        
+        tryNextFormat();
+    }
+    
+    onSoundLoaded(name, audio) {
+        this.sounds[name] = audio;
+        this.loadedCount++;
+        
+        const progress = Math.floor((this.loadedCount / this.totalCount) * 100);
+        console.log(`📊 Progresso: ${this.loadedCount}/${this.totalCount} (${progress}%)`);
+        
+        if (this.onProgressCallback) {
+            this.onProgressCallback(this.loadedCount, this.totalCount, progress);
+        }
+        
+        if (this.loadedCount >= this.totalCount) {
+            console.log('✨ Audio caricati!');
+            if (this.onCompleteCallback) {
+                this.onCompleteCallback();
+            }
+        }
+    }
+    
+    play(name) {
+        const audio = this.sounds[name];
+        if (!audio) {
+            console.warn(`Audio '${name}' non trovato`);
+            return;
+        }
+        
+        if (this.audioContext && this.audioContext.state === 'suspended') {
+            this.audioContext.resume();
+        }
+        
+        if (audio.readyState >= 2) {
+            audio.currentTime = 0;
+        }
+        
+        const playPromise = audio.play();
+        if (playPromise !== undefined) {
+            playPromise.catch(err => {
+                if (err.name === 'NotAllowedError') {
+                    console.warn('🔇 Audio bloccato');
+                } else if (err.name === 'AbortError') {
+                    setTimeout(() => audio.play().catch(() => {}), 50);
+                }
+            });
+        }
+    }
+    
+    stop(name) {
+        const audio = this.sounds[name];
+        if (!audio) return;
+        audio.pause();
+        if (audio.readyState >= 2) {
+            audio.currentTime = 0;
+        }
+    }
+    
+    stopAll() {
+        Object.values(this.sounds).forEach(audio => {
+            if (audio) {
+                audio.pause();
+                if (audio.readyState >= 2) {
+                    audio.currentTime = 0;
+                }
+            }
+        });
+    }
+    
+    unlock() {
+        this.initAudioContext();
+        
+        Object.values(this.sounds).forEach(audio => {
+            if (!audio) return;
+            
+            const originalVolume = audio.volume;
+            audio.volume = 0;
+            
+            const playPromise = audio.play();
+            if (playPromise !== undefined) {
+                playPromise.then(() => {
+                    audio.pause();
+                    if (audio.readyState >= 2) {
+                        audio.currentTime = 0;
+                    }
+                    audio.volume = originalVolume;
+                }).catch(() => {
+                    audio.volume = originalVolume;
+                });
+            }
+        });
+        
+        console.log('🔓 Audio sbloccato');
+    }
+}
+
+// Istanza globale
+const audioManager = new AudioManager();
+
+/* ==========================================================================
+   FINE AUDIO MANAGER
+   ========================================================================== */
+
 // Inizia caricamento audio
 let audioLoaded = false;
 let audioLoadedCount = 0;
@@ -74,13 +278,11 @@ let audioTotalCount = 0;
 
 audioManager.loadAll(
     (loaded, total, percent) => {
-        // Callback progresso
         audioLoadedCount = loaded;
         audioTotalCount = total;
         updateProgress();
     },
     () => {
-        // Callback completamento
         audioLoaded = true;
         console.log('✅ Audio pronti!');
         updateProgress();
@@ -118,7 +320,6 @@ function updateProgress() {
         loadingDetails.textContent = `Assets: ${loaded}/${total} (Images: ${loadedImages}/${imagesToLoad.length}, Audio: ${audioLoadedCount}/${audioTotalCount})`;
     }
     
-    // Debug info per tap overlay (quando loading è completo)
     const debugInfo = document.getElementById('debug-info');
     if (debugInfo) {
         debugInfo.textContent = `Loading: ${percent}% (${loaded}/${total})`;
@@ -132,7 +333,6 @@ function checkStart() {
     const loaded = loadedImages + audioLoadedCount;
     
     if (loaded === total && audioLoaded) {
-        // Tutto caricato!
         const loadingOverlay = document.getElementById('loading-overlay');
         const loadingText = document.getElementById('loading-text');
         const debugInfo = document.getElementById('debug-info');
@@ -140,7 +340,6 @@ function checkStart() {
         if (loadingText) loadingText.textContent = '✅ Ready!';
         if (debugInfo) debugInfo.textContent = 'Ready! 🎮 Tap to start';
         
-        // Nascondi loading overlay dopo 500ms
         setTimeout(() => {
             if (loadingOverlay) {
                 loadingOverlay.classList.add('hidden');
@@ -155,7 +354,6 @@ function checkStart() {
 }
 
 export function playSound(type) {
-    // Usa l'AudioContext del manager
     if (audioManager.audioContext) {
         if (audioManager.audioContext.state === 'suspended') {
             audioManager.audioContext.resume();
@@ -215,13 +413,13 @@ export function playSound(type) {
         osc.start(); 
         osc.stop(now + 0.4); 
     }
+    }
 }
 
 export function safePlayAudio(audio) {
     if (!audio) return;
     audioManager.initAudioContext();
     
-    // Usa il metodo robusto del manager
     if (audio.readyState >= 2) {
         audio.currentTime = 0;
     }
@@ -230,13 +428,11 @@ export function safePlayAudio(audio) {
     if (playPromise !== undefined) {
         playPromise.catch(err => {
             if (err.name === 'NotAllowedError') {
-                console.warn('🔇 Audio bloccato da policy browser');
+                console.warn('🔇 Audio bloccato');
             } else if (err.name === 'AbortError') {
                 setTimeout(() => {
-                    audio.play().catch(e => console.warn('Retry fallito:', e));
+                    audio.play().catch(() => {});
                 }, 50);
-            } else {
-                console.warn('Errore audio:', err);
             }
         });
     }
@@ -247,111 +443,79 @@ export function stopAllSounds() {
 }
 
 // Inizializza renderer
-initRenderer(canvas, ctx, sprites);
+initRenderer(canvas, ctx, sprites, config);
+initInput(audioManager.audioContext || new (window.AudioContext || window.webkitAudioContext)());
 
-// Inizializza input
-initInput(audioCtx);
-
-// LEVEL LOADING
-window.loadLevelData = function(data) { 
-    gameState.statusMessage = ""; 
-    initGame(data); 
-};
-
-export function loadLevelScript(n) {
-    setCurrentLevelNumber(n);
-    const old = document.getElementById('level-script'); 
-    if (old) old.remove();
-    const s = document.createElement('script'); 
-    s.id = 'level-script'; 
-    s.src = `level${n}.js`;
-    s.onerror = () => { 
-        if (n === 1) gameState.statusMessage = "Manca level1.js"; 
-        else drawVictoryScreen(); 
+// Carica un livello
+function loadLevelScript(levelNum) {
+    setCurrentLevelNumber(levelNum);
+    const script = document.createElement('script');
+    script.type = 'module';
+    script.src = `levels/level${levelNum}.js`;
+    script.onload = () => console.log(`✅ Livello ${levelNum} caricato`);
+    script.onerror = () => {
+        console.error(`❌ Errore caricamento livello ${levelNum}`);
+        gameState.statusMessage = `Livello ${levelNum} non trovato`;
     };
-    document.body.appendChild(s);
+    document.head.appendChild(script);
 }
 
-function drawVictoryScreen() {
-    setGameRunning(false);
-    ctx.fillStyle = '#000';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = '#00ffff';
-    ctx.font = 'bold 50px Orbitron, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('HAI COMPLETATO TUTTI I LIVELLI!', canvas.width / 2, canvas.height / 2 - 50);
-    ctx.font = '30px Orbitron, sans-serif';
-    ctx.fillStyle = '#ffff00';
-    ctx.fillText(`Stelle: ${gameState.stars} | Bandiere: ${gameState.flags} | Lampadine: ${gameState.bulbs}`, 
-        canvas.width / 2, canvas.height / 2 + 20);
-}
-
-function initGame(levelData) {
-    if (!levelData) return;
+export function loadLevel(levelData) {
+    console.log(`🎮 Avvio livello ${currentLevelNumber}...`);
     
-    safePlayAudio(sfx.beginLevel);
-    gameState.hasKey = false; 
-    gameState.doorOpen = false; 
     gameState.won = false;
-    gameState.victoryTime = 0;
-    gameState.power = gameState.maxPower;
     gameState.gameOver = false;
-    
-    // Cambia colore sfondo mattoni ad ogni livello
-    randomizeBrickColor();
-    
-    setCurrentMap(JSON.parse(JSON.stringify(levelData.map)));
-    config.tileSize = levelData.tileSize || 20;
-    
-    // Calcola zoom base
-    const baseZoom = config.viewportHeight / (23 * config.tileSize);
-    
-    // Applica moltiplicatore mobile (1.5x su mobile, 1x su desktop)
-    const mobileMultiplier = isMobile ? 1.5 : 1.0;
-    config.zoom = baseZoom * mobileMultiplier;
-    
-    console.log('🔧 Zoom calcolato:', {
-        baseZoom: baseZoom.toFixed(2),
-        mobileMultiplier,
-        zoomFinale: config.zoom.toFixed(2),
-        tileSize: config.tileSize
-    });
-    
-    const tempItems = [];
-    const tempEnemies = [];
-    const tempTriggers = [];
-    const tempDecorations = [];
-    const tempLavas = [];
-    
-    setLavaParticles([]);
-    setDustParticles([]); // Reset particelle di polvere
-    setFireworkParticles([]); // Reset fuochi d'artificio
-    setColorParticles([]); // Reset particelle colorate
+    gameState.hasKey = false;
+    gameState.doorOpen = false;
+    gameState.stars = 0;
+    gameState.flags = 0;
+    gameState.bulbs = 0;
+    gameState.power = gameState.maxPower;
+    gameState.statusMessage = `Livello ${currentLevelNumber}`;
+    gameState.victoryTime = 0;
 
-    const currentMap = levelData.map;
-    const rows = currentMap.length;
-    const cols = currentMap[0].length;
-    
-    for (let y = 0; y < rows; y++) {
-        for (let x = 0; x < cols; x++) {
+    config.tileSize = levelData.tileSize || 30;
+    config.baseGravity = levelData.gravity !== undefined ? levelData.gravity : 0.45;
+    config.baseSpeed = levelData.speed !== undefined ? levelData.speed : 15.0;
+    config.baseThrust = levelData.thrust !== undefined ? levelData.thrust : -0.80;
+    config.maxFallSpeed = levelData.maxFallSpeed !== undefined ? levelData.maxFallSpeed : 4.6;
+    config.maxFlySpeed = levelData.maxFlySpeed !== undefined ? levelData.maxFlySpeed : -0.36;
+
+    let currentMap = levelData.map.map(row => row.slice());
+    setLavaParticles([]);
+    setDustParticles([]);
+    setFireworkParticles([]);
+    setColorParticles([]);
+    randomizeBrickColor();
+
+    let tempItems = [];
+    let tempEnemies = [];
+    let tempTriggers = [];
+    let tempDecorations = [];
+    let tempLavas = [];
+
+    for (let y = 0; y < currentMap.length; y++) {
+        for (let x = 0; x < currentMap[y].length; x++) {
             const cell = currentMap[y][x];
+            if (cell === 0 || cell === 1) continue;
+
             const type = (typeof cell === 'object') ? cell.type : cell;
             const group = (typeof cell === 'object') ? cell.group : null;
-            
-            if (type === 0 || type === 1) continue;
-            
+
             let w = 1, h = 1;
-            while (x + w < cols) {
-                const nextCell = currentMap[y][x + w];
-                const nextType = (typeof nextCell === 'object') ? nextCell.type : nextCell;
-                const nextGroup = (typeof nextCell === 'object') ? nextCell.group : null;
-                if (nextType !== type || nextGroup !== group) break;
+
+            for (let dx = x + 1; dx < currentMap[y].length; dx++) {
+                const checkCell = currentMap[y][dx];
+                const checkType = (typeof checkCell === 'object') ? checkCell.type : checkCell;
+                const checkGroup = (typeof checkCell === 'object') ? checkCell.group : null;
+                if (checkType !== type || checkGroup !== group) break;
                 w++;
             }
-            let canDown = true;
-            while (canDown && y + h < rows) {
-                for (let k = 0; k < w; k++) {
-                    const checkCell = currentMap[y + h][x + k];
+
+            for (let dy = y + 1; dy < currentMap.length; dy++) {
+                let canDown = true;
+                for (let dx = x; dx < x + w; dx++) {
+                    const checkCell = currentMap[dy][dx];
                     const checkType = (typeof checkCell === 'object') ? checkCell.type : checkCell;
                     const checkGroup = (typeof checkCell === 'object') ? checkCell.group : null;
                     if (checkType !== type || checkGroup !== group) canDown = false;
@@ -413,7 +577,7 @@ function initGame(levelData) {
 // GAME LOOP
 let lastTime = 0;
 let accumulator = 0;
-let fireworkTimer = 0; // Timer per generare fuochi d'artificio
+let fireworkTimer = 0;
 
 function loop(timestamp) {
     if (!gameRunning) return;
@@ -429,8 +593,6 @@ function loop(timestamp) {
     
     accumulator += deltaTime;
     
-    // OTTIMIZZAZIONE MOBILE: Meno update su mobile per migliori FPS
-    // Mobile: max 2 update/frame, Desktop: max 3 update/frame
     let updatesThisFrame = 0;
     const maxUpdatesPerFrame = isMobile ? 2 : 3;
     
@@ -440,17 +602,14 @@ function loop(timestamp) {
         updatesThisFrame++;
     }
     
-    // Se accumulator è ancora troppo alto, resettalo per evitare spiral of death
     if (accumulator > config.fixedTimeStep * 5) {
         accumulator = 0;
     }
     
-    // Genera particelle colorate CONTINUE durante la vittoria (come lava)
     if (gameState.won && gameState.vX && gameState.vY) {
-        if (Math.random() < 0.3) { // 30% probabilità ogni frame = molto frequenti
+        if (Math.random() < 0.3) {
             const centerX = gameState.vX + gameState.vW / 2;
             const centerY = gameState.vY + gameState.vH / 2;
-            // 8-12 particelle multicolore per burst
             createColorParticles(centerX, centerY, 8 + Math.floor(Math.random() * 4), 'collect');
         }
     }
@@ -461,9 +620,7 @@ function loop(timestamp) {
 }
 
 // RETRY BUTTON
-
 function showRetryButton() {
-    // Rimuove la classe per far riapparire il mouse!
     document.body.classList.remove('game-active'); 
     
     const oldBtn = document.getElementById('retry-btn');
@@ -493,13 +650,11 @@ function showRetryButton() {
 }
 
 function restartGame() {
-    // Nasconde di nuovo il mouse per il gameplay
     document.body.classList.add('game-active'); 
     
     const btn = document.getElementById('retry-btn');
     if (btn) btn.remove();
 
-    
     gameState.gameOver = false;
     gameState.power = gameState.maxPower; 
     gameState.hasKey = false;
@@ -520,12 +675,9 @@ let fullscreenActivated = false;
 const tapOverlay = document.getElementById('tap-to-start');
 
 function startGame() {
-    // Inizializza e sblocca audio (FONDAMENTALE per iOS/Android)
     audioManager.unlock();
-    
     safePlayAudio(sfx.beginLevel);
     
-    // Nascondi cursore durante il gioco
     document.body.classList.add('game-active');
     
     if (tapOverlay) {
