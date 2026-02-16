@@ -32,10 +32,11 @@ jobs:
         run: |
           npx cap init "Icarous" "com.icarous.gioco" --web-dir www
           npx cap add android
-          - name: Forza Orientamento Landscape
+          npx cap copy android
+
+      - name: Forza Orientamento Landscape
         run: |
           sed -i 's/android:configChanges="[^"]*"/& android:screenOrientation="landscape"/' android/app/src/main/AndroidManifest.xml
-          npx cap copy android
 
       # --- ECCO IL PASSAGGIO NINJA PER RISOLVERE IL CONFLITTO ---
       - name: Fix Kotlin Duplicate Classes
