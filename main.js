@@ -443,7 +443,7 @@ export function stopAllSounds() {
 }
 
 // Inizializza renderer
-initRenderer(canvas, ctx, sprites, config);
+initRenderer(canvas, ctx, sprites);
 initInput(audioManager.audioContext || new (window.AudioContext || window.webkitAudioContext)());
 
 // Carica un livello
