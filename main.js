@@ -20,7 +20,7 @@ console.log('🎮 Setup Canvas:', {
 
 
 // Mostra hint F11 solo su desktop
-if (!isMobile) {
+if (!/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
     const hint = document.createElement('div');
     hint.textContent = 'PREMI F11 PER ANDARE A SCHERMO INTERO';
     hint.style.cssText = 'text-align: center; margin-top: 10px; font-size: 12px; color: #888; font-family: Orbitron, sans-serif;';
