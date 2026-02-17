@@ -11,22 +11,23 @@ jobs:
     steps:
       - name: Checkout del codice
         uses: actions/checkout@v4
-        
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          
+
       - name: Prepara ambiente e cartella www
         run: |
           if [ ! -f package.json ]; then npm init -y; fi
           mkdir -p www
           rsync -av --exclude='www' --exclude='.github' --exclude='.git' --exclude='node_modules' . www/
-          
+
+      # 1. MODIFICA: Aggiunto @capacitor/assets qui
       - name: Installazione dipendenze e Capacitor
         run: |
-          npm install @capacitor/core @capacitor/cli @capacitor/android
-          
+          npm install @capacitor/core @capacitor/cli @capacitor/android @capacitor/assets
+
       - name: Crea capacitor.config.json
         run: |
           cat > capacitor.config.json << 'EOF'
@@ -43,41 +44,85 @@ jobs:
             }
           }
           EOF
-          
+
       - name: Inizializza Capacitor e Android
         run: |
           npx cap add android
           npx cap copy android
-          
-      - name: Forza Orientamento Landscape + Fullscreen
+
+      # 2. MODIFICA: Nuovo blocco per generare le icone automaticamente
+      - name: Genera Icone App
         run: |
-          # Forza landscape
-          sed -i 's/android:name="MainActivity"/android:name="MainActivity" android:screenOrientation="sensorLandscape"/' android/app/src/main/AndroidManifest.xml
-          
-          # Aggiungi fullscreen (nasconde status bar)
-          sed -i 's/<application/<!-- Fullscreen mode -->\n    <application/' android/app/src/main/AndroidManifest.xml
-          
-          # Aggiungi tema fullscreen
+          if [ -f "icon.png" ]; then
+            echo "Trovata icon.png! Generazione icone in corso..."
+            mkdir -p assets
+            cp icon.png assets/
+            npx capacitor-assets generate --android
+          else
+            echo "Nessuna icon.png trovata. Procedo con l'icona di default."
+          fi
+
+      - name: Forza Landscape Fullscreen Immersive nel Manifest
+        run: |
+          MANIFEST=android/app/src/main/AndroidManifest.xml
+
+          # 1. Forza sensorLandscape sull'activity principale
+          sed -i 's/android:name="\.MainActivity"/android:name=".MainActivity" android:screenOrientation="sensorLandscape"/' "$MANIFEST"
+
+          # 2. Aggiungi layoutInDisplayCutoutMode per notch/punch-hole
+          sed -i 's/android:name="\.MainActivity"/android:name=".MainActivity" android:windowSoftInputMode="adjustResize"/' "$MANIFEST"
+
+          # 3. Rimuovi eventuali attributi screenOrientation duplicati (idempotente)
+          # (sed li sovrascrive al passo successivo se già presenti)
+
+          echo "Manifest dopo le modifiche:"
+          grep -A5 "MainActivity" "$MANIFEST"
+
+      - name: Crea styles.xml con tema Fullscreen Immersive
+        run: |
           mkdir -p android/app/src/main/res/values
+
           cat > android/app/src/main/res/values/styles.xml << 'EOF'
           <?xml version="1.0" encoding="utf-8"?>
           <resources>
-              <style name="AppTheme.NoActionBarLaunch" parent="Theme.AppCompat.Light.NoActionBar">
+              <style name="AppTheme" parent="Theme.AppCompat.Light.NoActionBar">
+                  <item name="android:windowBackground">@android:color/black</item>
+              </style>
+
+              <style name="AppTheme.NoActionBarLaunch" parent="AppTheme">
                   <item name="android:windowFullscreen">true</item>
                   <item name="android:windowContentOverlay">@null</item>
                   <item name="android:windowIsTranslucent">false</item>
                   <item name="android:windowBackground">@android:color/black</item>
+                  <item name="android:windowLayoutInDisplayCutoutMode" tools:targetApi="27">shortEdges</item>
               </style>
           </resources>
           EOF
-          
-          # Applica tema
-          sed -i 's/android:theme="@style\/AppTheme"/android:theme="@style\/AppTheme.NoActionBarLaunch"/' android/app/src/main/AndroidManifest.xml
-          
+
+          # Applica il tema NoActionBarLaunch all'activity
+          sed -i 's/android:theme="@style\/AppTheme[^"]*"/android:theme="@style\/AppTheme.NoActionBarLaunch"/' \
+            android/app/src/main/AndroidManifest.xml
+
+      - name: Inietta codice Immersive Sticky Mode in MainActivity.java
+        run: |
+          # Trova MainActivity
+          MAIN_ACTIVITY=$(find android -name "MainActivity.java" | head -1)
+          echo "MainActivity trovata: $MAIN_ACTIVITY"
+
+          # Aggiungi import necessari dopo il package statement
+          sed -i '/^package /a import android.os.Bundle;\nimport android.view.View;\nimport android.view.WindowManager;' "$MAIN_ACTIVITY"
+
+          # Sostituisci il metodo onCreate per aggiungere fullscreen immersive
+          # (inietta codice subito dopo super.onCreate)
+          sed -i 's/super\.onCreate(savedInstanceState);/super.onCreate(savedInstanceState);\n\n        \/\/ Fullscreen immersive sticky (nasconde status bar e navigation bar)\n        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);\n        getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);\n        View decorView = getWindow().getDecorView();\n        decorView.setSystemUiVisibility(\n            View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY\n            | View.SYSTEM_UI_FLAG_FULLSCREEN\n            | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION\n            | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN\n            | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION\n            | View.SYSTEM_UI_FLAG_LAYOUT_STABLE\n        );/' "$MAIN_ACTIVITY"
+
+          echo "MainActivity aggiornata:"
+          head -60 "$MAIN_ACTIVITY"
+
       - name: Fix Kotlin Duplicate Classes
         run: |
-          cat <<EOF >> android/app/build.gradle
-          
+          cat << 'EOF' >> android/app/build.gradle
+
           dependencies {
               modules {
                   module("org.jetbrains.kotlin:kotlin-stdlib-jdk7") {
@@ -89,19 +134,19 @@ jobs:
               }
           }
           EOF
-          
+
       - name: Setup Java (JDK 21)
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: '21'
-          
+
       - name: Build APK (Gradle)
         run: |
           cd android
           chmod +x gradlew
           ./gradlew assembleDebug
-          
+
       - name: Carica APK come Artefatto
         uses: actions/upload-artifact@v4
         with:
