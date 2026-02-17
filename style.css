@@ -338,20 +338,38 @@ body.game-active * {
 }
 
 .key-indicator {
-    font-size: 20px;
-    color: #444;
-    transition: all 0.3s ease;
+    font-size: 0; /* Nasconde l'icona testuale precedente */
+    width: 24px;  /* Dimensione calibrata per non allargare l'HUD */
+    height: 24px;
+    display: inline-block;
+    background-image: url('png/key.png'); /* Assicurati che il percorso sia corretto */
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    
+    /* Stato "Slot Vuoto" */
+    opacity: 0.25; 
+    filter: grayscale(100%); 
+    transform: scale(0.9);
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
 .key-indicator.has-key {
-    color: var(--neon-yellow);
-    text-shadow: var(--glow-yellow);
-    animation: keyPulse 1s infinite;
+    /* Stato "Chiave Presa" */
+    opacity: 1;
+    filter: grayscale(0%) drop-shadow(0 0 10px var(--neon-yellow));
+    animation: keyNeonPulse 1.2s infinite alternate;
 }
 
-@keyframes keyPulse {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.2); }
+@keyframes keyNeonPulse {
+    0% { 
+        transform: scale(1.0) rotate(-5deg); 
+        filter: grayscale(0%) drop-shadow(0 0 5px var(--neon-yellow)); 
+    }
+    100% { 
+        transform: scale(1.15) rotate(5deg); 
+        filter: grayscale(0%) drop-shadow(0 0 12px var(--neon-yellow)); 
+    }
 }
 
 /* ============================================
