@@ -96,25 +96,28 @@ jobs:
           sed -i 's/android:theme="@style\/AppTheme[^"]*"/android:theme="@style\/AppTheme.NoActionBarLaunch"/' \
             android/app/src/main/AndroidManifest.xml
 
-      - name: Inietta codice Immersive Sticky Mode in MainActivity.java
+      - name: Inietta codice Immersive Mode in MainActivity.java
         run: |
           MAIN_ACTIVITY=$(find android -name "MainActivity.java" | head -1)
           echo "MainActivity trovata: $MAIN_ACTIVITY"
 
           # Aggiungi import necessari dopo il package statement
-          sed -i '/^package /a import android.os.Bundle;\nimport android.view.View;\nimport android.view.WindowManager;' "$MAIN_ACTIVITY"
+          # Nota: WindowInsetsController è API 30 (Android 11+), usiamo compat per retrocompatibilità
+          sed -i '/^package /a import android.os.Build;\nimport android.view.View;\nimport android.view.WindowManager;\nimport androidx.core.view.WindowCompat;\nimport androidx.core.view.WindowInsetsCompat;\nimport androidx.core.view.WindowInsetsControllerCompat;' "$MAIN_ACTIVITY"
 
-          # Inietta fullscreen immersive sticky subito dopo super.onCreate
-          sed -i 's/super\.onCreate(savedInstanceState);/super.onCreate(savedInstanceState);\n\n        \/\/ Fullscreen immersive sticky (nasconde status bar e navigation bar)\n        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);\n        getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);\n        View decorView = getWindow().getDecorView();\n        decorView.setSystemUiVisibility(\n            View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY\n            | View.SYSTEM_UI_FLAG_FULLSCREEN\n            | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION\n            | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN\n            | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION\n            | View.SYSTEM_UI_FLAG_LAYOUT_STABLE\n        );/' "$MAIN_ACTIVITY"
+          # Inietta fullscreen immersive moderno subito dopo super.onCreate
+          # WindowInsetsControllerCompat NON intercetta il primo touch a differenza dei vecchi SYSTEM_UI_FLAG
+          sed -i 's/super\.onCreate(savedInstanceState);/super.onCreate(savedInstanceState);\n\n        \/\/ Fullscreen Immersive Mode - API moderna (non intercetta il primo touch)\n        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);\n        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);\n        WindowInsetsControllerCompat insetsController =\n            WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());\n        if (insetsController != null) {\n            insetsController.hide(WindowInsetsCompat.Type.statusBars() | WindowInsetsCompat.Type.navigationBars());\n            insetsController.setSystemBarsBehavior(\n                WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE\n            );\n        }/' "$MAIN_ACTIVITY"
 
           echo "MainActivity aggiornata:"
-          head -60 "$MAIN_ACTIVITY"
+          head -70 "$MAIN_ACTIVITY"
 
-      - name: Fix Kotlin Duplicate Classes
+      - name: Fix Kotlin Duplicate Classes e aggiungi dipendenza AndroidX Core
         run: |
           cat << 'EOF' >> android/app/build.gradle
 
           dependencies {
+              implementation "androidx.core:core-ktx:1.12.0"
               modules {
                   module("org.jetbrains.kotlin:kotlin-stdlib-jdk7") {
                       replacedBy("org.jetbrains.kotlin:kotlin-stdlib", "kotlin-stdlib-jdk7 is now part of kotlin-stdlib")
