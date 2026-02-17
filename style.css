@@ -97,11 +97,19 @@ body.game-active * {
 .tap-overlay {
     position: fixed;
     inset: 0;
+    /* Safe area per notch e barre di sistema Android/iOS */
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
     background: radial-gradient(circle at center, #0a0a2e, #000);
-    z-index: 9999;
+    /* z-index altissimo: deve stare sopra TUTTO, inclusi layer Capacitor */
+    z-index: 99999;
     display: none;
     justify-content: center;
     align-items: center;
+    /* CRITICO: assicura che riceva i touch events nella WebView */
+    pointer-events: auto;
+    touch-action: manipulation;
+    /* Feedback visivo al tocco nella WebView */
+    -webkit-tap-highlight-color: rgba(0,255,255,0.1);
 }
 
 .tap-overlay.show {

@@ -517,62 +517,86 @@ function restartGame() {
 
 const tapOverlay = document.getElementById('tap-to-start');
 
+// Guard flag: impedisce doppia chiamata da touchstart+touchend sullo stesso tap
+let gameStarted = false;
+
+// Rileva se siamo dentro la WebView di Capacitor (APK Android)
+const isCapacitor = !!(window.Capacitor || window.webkit?.messageHandlers?.capacitor);
+
 function startGame() {
-    if (audioCtx.state === 'suspended') audioCtx.resume();
-    
-    // FIX iOS: Forza caricamento COMPLETO di tutti gli audio al primo tap
-    // Questo risolve il problema di audio "pigri" su iOS
+    // GUARD: evita doppia esecuzione (touchstart + touchend sparano entrambi)
+    if (gameStarted) return;
+    gameStarted = true;
+
+    // Resume AudioContext in modo sicuro (può essere già running)
+    if (audioCtx.state === 'suspended') {
+        audioCtx.resume().catch(() => {});
+    }
+
+    // FIX iOS/Android: "Prime" ogni audio con null-check
     Object.values(sfx).forEach(audio => {
-        if (audio.readyState < 4) { // HAVE_ENOUGH_DATA
-            audio.load();
-        }
-        // "Prime" ogni audio riproducendolo a volume 0 per 1ms
-        // iOS richiede questo trucco per sbloccare completamente l'audio
-        const originalVolume = audio.volume;
-        audio.volume = 0;
-        audio.play().then(() => {
-            audio.pause();
-            audio.currentTime = 0;
-            audio.volume = originalVolume;
-        }).catch(() => {}); // Ignora errori
+        if (!audio) return; // Salta audio non caricati
+        try {
+            if (audio.readyState < 4) audio.load();
+            const originalVolume = audio.volume;
+            audio.volume = 0;
+            audio.play().then(() => {
+                audio.pause();
+                audio.currentTime = 0;
+                audio.volume = originalVolume;
+            }).catch(() => {}); // Ignora errori policy browser
+        } catch(e) {}
     });
-    
+
     safePlayAudio(sfx.beginLevel);
-    
+
     // Nascondi cursore durante il gioco
     document.body.classList.add('game-active');
-    
+
     if (tapOverlay) {
         tapOverlay.classList.remove('show');
-        setTimeout(() => tapOverlay.style.display = 'none', 300);
+        setTimeout(() => { tapOverlay.style.display = 'none'; }, 300);
     }
     const gameContainer = document.getElementById('game-container');
     if (gameContainer) gameContainer.style.display = 'flex';
-    
-    if (!gameRunning) { 
+
+    // Richiedi fullscreen SOLO se NON siamo in Capacitor WebView
+    // In Capacitor l'Immersive Mode è gestito nativamente da MainActivity,
+    // chiamare requestFullscreen() causerebbe un'eccezione non necessaria.
+    if (!isCapacitor) {
+        try {
+            if (document.documentElement.requestFullscreen) {
+                document.documentElement.requestFullscreen().catch(() => {});
+            } else if (document.documentElement.webkitRequestFullscreen) {
+                document.documentElement.webkitRequestFullscreen();
+            }
+        } catch(e) {
+            console.warn('Fullscreen non disponibile:', e);
+        }
+    }
+
+    if (!gameRunning) {
         setGameRunning(true);
-        lastTime = 0; 
-        accumulator = 0; 
-        requestAnimationFrame(loop); 
+        lastTime = 0;
+        accumulator = 0;
+        requestAnimationFrame(loop);
     }
 }
 
 if (tapOverlay) {
     tapOverlay.classList.add('show');
-    
-    // NUOVO: Aggiunto 'touchstart', fondamentale per sbloccare l'audio e partire su Android
-    tapOverlay.addEventListener('touchstart', function(e) { 
-        e.preventDefault(); 
-        startGame(); 
+
+    // USA SOLO touchstart per massima reattività su Android/iOS
+    // touchend non serve se usiamo preventDefault su touchstart
+    tapOverlay.addEventListener('touchstart', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        startGame();
     }, { passive: false });
 
-    tapOverlay.addEventListener('touchend', function(e) { 
-        e.preventDefault(); 
-        startGame(); 
-    }, { passive: false });
-    
-    tapOverlay.addEventListener('click', function(e) { 
-        e.preventDefault(); 
-        startGame(); 
+    // Fallback per desktop/click fisici
+    tapOverlay.addEventListener('click', function(e) {
+        e.preventDefault();
+        startGame();
     });
 }
