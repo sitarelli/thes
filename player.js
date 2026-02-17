@@ -165,12 +165,11 @@ export function winLevel(d, currentLevelNumber, loadLevelScript) {
     gameState.vW = d.w; 
     gameState.vH = d.h;
     
-    sfx.walk.pause(); 
-    sfx.fly.pause();
+    sfx.walk && sfx.walk.pause(); 
+    sfx.fly && sfx.fly.pause();
     
     // FIX iOS: Assicurati che levelup sia completamente fermo prima di suonare
-    sfx.levelup.pause();
-    sfx.levelup.currentTime = 0;
+    if (sfx.levelup) { sfx.levelup.pause(); sfx.levelup.currentTime = 0; }
     
     // Piccolo delay per iOS
     setTimeout(() => {
@@ -193,8 +192,8 @@ export function winLevel(d, currentLevelNumber, loadLevelScript) {
 
 export function update(dt, showRetryButtonCallback, currentLevelNumber, loadLevelScript) {
     if (gameState.gameOver || gameState.won) {
-        sfx.walk.pause();
-        sfx.fly.pause();
+        sfx.walk && sfx.walk.pause();
+        sfx.fly && sfx.fly.pause();
         return;
     }
 
@@ -312,16 +311,16 @@ export function update(dt, showRetryButtonCallback, currentLevelNumber, loadLeve
 
     // SUONI MOVIMENTO
     if (player.animState === 2 || player.animState === 3) {
-        if (sfx.fly.paused) safePlayAudio(sfx.fly);
-        sfx.walk.pause(); 
+        if (sfx.fly && sfx.fly.paused) safePlayAudio(sfx.fly);
+        if (sfx.walk) sfx.walk.pause(); 
     } 
     else if (player.animState === 1) {
-        if (sfx.walk.paused) safePlayAudio(sfx.walk);
-        sfx.fly.pause();
+        if (sfx.walk && sfx.walk.paused) safePlayAudio(sfx.walk);
+        if (sfx.fly) sfx.fly.pause();
     } 
     else {
-        sfx.walk.pause();
-        sfx.fly.pause();
+        if (sfx.walk) sfx.walk.pause();
+        if (sfx.fly) sfx.fly.pause();
     }
 
     player.frameTimer++;

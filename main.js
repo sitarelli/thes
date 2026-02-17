@@ -158,11 +158,19 @@ function checkStart() {
     }
 }
 
-// Audio Context
+// Audio Context - creato LAZY al primo tap per evitare blocco Chrome/Android
 const AudioContext = window.AudioContext || window.webkitAudioContext;
-const audioCtx = new AudioContext();
+let audioCtx = null;
+
+function getOrCreateAudioContext() {
+    if (!audioCtx) {
+        audioCtx = new AudioContext();
+    }
+    return audioCtx;
+}
 
 export function playSound(type) {
+    const audioCtx = getOrCreateAudioContext();
     if (audioCtx.state === 'suspended') audioCtx.resume();
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
@@ -247,16 +255,16 @@ export function safePlayAudio(audio) {
 
 export function stopAllSounds() {
     Object.values(sfx).forEach(audio => {
-        audio.pause();
-        audio.currentTime = 0;
+        if (!audio) return;
+        try { audio.pause(); audio.currentTime = 0; } catch(e) {}
     });
 }
 
 // Inizializza renderer
 initRenderer(canvas, ctx, sprites);
 
-// Inizializza input
-initInput(audioCtx);
+// Inizializza input (audioCtx lazy, verrà creato al primo tap)
+initInput(null);
 
 // LEVEL LOADING
 window.loadLevelData = function(data) { 
@@ -517,40 +525,37 @@ function restartGame() {
 
 const tapOverlay = document.getElementById('tap-to-start');
 
-// Guard flag: impedisce doppia chiamata da touchstart+touchend sullo stesso tap
+// Guard flag: impedisce doppia chiamata da touchstart+click
 let gameStarted = false;
 
-// Rileva se siamo dentro la WebView di Capacitor (APK Android)
-const isCapacitor = !!(window.Capacitor || window.webkit?.messageHandlers?.capacitor);
+// Rileva Capacitor WebView (APK Android) per saltare requestFullscreen
+const isCapacitor = !!(window.Capacitor || (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.capacitor));
 
 function startGame() {
-    // GUARD: evita doppia esecuzione (touchstart + touchend sparano entrambi)
     if (gameStarted) return;
     gameStarted = true;
 
-    // Resume AudioContext in modo sicuro (può essere già running)
-    if (audioCtx.state === 'suspended') {
-        audioCtx.resume().catch(() => {});
-    }
+    // Crea AudioContext SOLO ora (dopo gesto utente) - evita blocco Chrome policy
+    const ctx = getOrCreateAudioContext();
+    if (ctx.state === 'suspended') ctx.resume().catch(() => {});
 
-    // FIX iOS/Android: "Prime" ogni audio con null-check
+    // "Prime" ogni audio con null-check per sbloccare iOS/Android
     Object.values(sfx).forEach(audio => {
-        if (!audio) return; // Salta audio non caricati
+        if (!audio) return;
         try {
             if (audio.readyState < 4) audio.load();
-            const originalVolume = audio.volume;
+            const vol = audio.volume;
             audio.volume = 0;
             audio.play().then(() => {
                 audio.pause();
                 audio.currentTime = 0;
-                audio.volume = originalVolume;
-            }).catch(() => {}); // Ignora errori policy browser
+                audio.volume = vol;
+            }).catch(() => {});
         } catch(e) {}
     });
 
     safePlayAudio(sfx.beginLevel);
 
-    // Nascondi cursore durante il gioco
     document.body.classList.add('game-active');
 
     if (tapOverlay) {
@@ -560,9 +565,7 @@ function startGame() {
     const gameContainer = document.getElementById('game-container');
     if (gameContainer) gameContainer.style.display = 'flex';
 
-    // Richiedi fullscreen SOLO se NON siamo in Capacitor WebView
-    // In Capacitor l'Immersive Mode è gestito nativamente da MainActivity,
-    // chiamare requestFullscreen() causerebbe un'eccezione non necessaria.
+    // Fullscreen solo su browser, non in Capacitor (già gestito da MainActivity)
     if (!isCapacitor) {
         try {
             if (document.documentElement.requestFullscreen) {
@@ -570,9 +573,7 @@ function startGame() {
             } else if (document.documentElement.webkitRequestFullscreen) {
                 document.documentElement.webkitRequestFullscreen();
             }
-        } catch(e) {
-            console.warn('Fullscreen non disponibile:', e);
-        }
+        } catch(e) {}
     }
 
     if (!gameRunning) {
@@ -586,17 +587,27 @@ function startGame() {
 if (tapOverlay) {
     tapOverlay.classList.add('show');
 
-    // USA SOLO touchstart per massima reattività su Android/iOS
-    // touchend non serve se usiamo preventDefault su touchstart
+    // Solo touchstart (touchend causerebbe doppio fire)
     tapOverlay.addEventListener('touchstart', function(e) {
         e.preventDefault();
         e.stopPropagation();
         startGame();
     }, { passive: false });
 
-    // Fallback per desktop/click fisici
+    // Fallback per desktop
     tapOverlay.addEventListener('click', function(e) {
         e.preventDefault();
         startGame();
     });
+}
+
+// Export richiesto da player.js
+export function timerPowerUp() {
+    // Ripristina il power del giocatore (chiamato da oggetti timer nel livello)
+    if (gameState) {
+        gameState.power = Math.min(
+            gameState.maxPower,
+            gameState.power + (gameState.maxPower * 0.25)
+        );
+    }
 }
