@@ -58,105 +58,79 @@ imagesToLoad.forEach(imgData => {
     sprites[imgData.name] = img;
 });
 
-// --- AUDIO CON FALLBACK OGG → MP3 ---
+// --- DEFINIZIONI AUDIO (solo OGG) ---
 const audioDefinitions = {
-    doorOpen: { files: ['audio/dooropen.ogg', 'audio/dooropen.mp3'], volume: 0.6 },
-    doorClose: { files: ['audio/doorclose.ogg', 'audio/doorclose.mp3'], volume: 0.6 },
-    walk: { files: ['audio/walkingthes.ogg', 'audio/walkingthes.mp3'], volume: 0.4, loop: true },
-    fly: { files: ['audio/flyingthes.ogg', 'audio/flyingthes.m4a'], volume: 0.5, loop: true },
-    levelup: { files: ['audio/levelup.ogg', 'audio/levelup.mp3'], volume: 0.7 },
-    beginLevel: { files: ['audio/beginlevel.ogg', 'audio/beginlevel.mp3'], volume: 0.7 },
-    keyPickup: { files: ['audio/key.ogg', 'audio/key.mp3'], volume: 0.6 },
-    death: { files: ['audio/death.ogg', 'audio/death.mp3'], volume: 0.7 },
-    contact: { files: ['audio/contact.ogg', 'audio/contact.mp3'], volume: 0.6 },
-    lava: { files: ['audio/lava.ogg', 'audio/lava.mp3'], volume: 0.5 }
+    doorOpen:   { src: 'audio/dooropen.ogg',    volume: 0.6 },
+    doorClose:  { src: 'audio/doorclose.ogg',   volume: 0.6 },
+    walk:       { src: 'audio/walkingthes.ogg', volume: 0.4, loop: true },
+    fly:        { src: 'audio/flyingthes.ogg',  volume: 0.5, loop: true },
+    levelup:    { src: 'audio/levelup.ogg',     volume: 0.7 },
+    beginLevel: { src: 'audio/beginlevel.ogg',  volume: 0.7 },
+    keyPickup:  { src: 'audio/key.ogg',         volume: 0.6 },
+    death:      { src: 'audio/death.ogg',       volume: 0.7 },
+    contact:    { src: 'audio/contact.ogg',     volume: 0.6 },
+    lava:       { src: 'audio/lava.ogg',        volume: 0.5, loop: true }
 };
 
 export const sfx = {};
-let loadedAudio = 0;
-const audioToLoad = Object.keys(audioDefinitions).length;
 
-// Funzione per caricare un audio con fallback multi-formato
-function loadAudioWithFallback(name, config) {
-    const audio = new Audio();
-    audio.volume = config.volume || 1.0;
-    audio.loop = config.loop || false;
-    audio.preload = 'auto';
-    
-    let formatIndex = 0;
-    
-    const tryNextFormat = () => {
-        if (formatIndex >= config.files.length) {
-            console.warn(`⚠️ Audio ${name} non caricato (tutti i formati falliti)`);
-            sfx[name] = null;
-            loadedAudio++;
-            updateProgress();
-            return;
-        }
-        
-        const src = config.files[formatIndex];
-        audio.src = src;
-        
-        const timeout = setTimeout(() => {
-            console.warn(`⏱️ Timeout ${src}, provo successivo...`);
-            formatIndex++;
-            tryNextFormat();
-        }, 2000);
-        
-        const onSuccess = () => {
-            clearTimeout(timeout);
-            console.log(`✅ Audio ${name} caricato: ${src}`);
+// Crea gli elementi Audio subito (src non ancora caricato)
+// Li popoliamo dentro loadAllAudio() dopo il tap
+Object.keys(audioDefinitions).forEach(name => { sfx[name] = null; });
+
+// Carica un singolo audio, restituisce Promise
+function loadSingleAudio(name, def) {
+    return new Promise(resolve => {
+        const audio = new Audio();
+        audio.volume = def.volume || 1.0;
+        audio.loop = def.loop || false;
+        audio.preload = 'auto';
+        audio.src = def.src;
+
+        const done = () => {
+            console.log(`✅ ${name}: ${def.src}`);
             sfx[name] = audio;
-            loadedAudio++;
-            updateProgress();
-            cleanup();
+            resolve();
         };
-        
-        const onError = () => {
-            clearTimeout(timeout);
-            console.warn(`❌ Errore ${src}`);
-            formatIndex++;
-            tryNextFormat();
-            cleanup();
+        const fail = () => {
+            console.warn(`❌ ${name}: ${def.src} fallito`);
+            sfx[name] = null;
+            resolve(); // risolve comunque per non bloccare il Promise.all
         };
-        
-        const cleanup = () => {
-            audio.removeEventListener('canplaythrough', onSuccess);
-            audio.removeEventListener('error', onError);
-        };
-        
-        audio.addEventListener('canplaythrough', onSuccess, { once: true });
-        audio.addEventListener('error', onError, { once: true });
+
+        audio.addEventListener('canplaythrough', done, { once: true });
+        audio.addEventListener('error', fail, { once: true });
+        // Timeout di sicurezza 3s per WebView lente
+        setTimeout(() => { if (!sfx[name]) fail(); }, 3000);
         audio.load();
-    };
-    
-    tryNextFormat();
+    });
 }
 
-// Carica tutti gli audio
-Object.entries(audioDefinitions).forEach(([name, config]) => {
-    loadAudioWithFallback(name, config);
-});
+// Carica TUTTI gli audio, aggiorna il debug text, risolve quando tutti pronti
+function loadAllAudio(onProgress) {
+    const entries = Object.entries(audioDefinitions);
+    let done = 0;
+    return Promise.all(entries.map(([name, def]) =>
+        loadSingleAudio(name, def).then(() => {
+            done++;
+            if (onProgress) onProgress(done, entries.length);
+        })
+    ));
+}
 
-// PROGRESS BAR
+// PROGRESS IMMAGINI - loadedImages già dichiarato sopra con gli sprites
+let imagesReady = false;
+
 function updateProgress() {
-    const total = imagesToLoad.length + audioToLoad;
-    const loaded = loadedImages + loadedAudio;
-    const percent = Math.floor((loaded / total) * 100);
     const debugInfo = document.getElementById('debug-info');
-    if (debugInfo) debugInfo.textContent = `Caricamento: ${percent}%`;
-    checkStart();
-}
-
-function checkStart() { 
-    const total = imagesToLoad.length + audioToLoad;
-    const loaded = loadedImages + loadedAudio;
-    if (loaded === total) {
-        const debugInfo = document.getElementById('debug-info');
-        if (debugInfo) debugInfo.textContent = 'Pronto! 🎮';
-        loadLevelScript(1);
+    if (debugInfo) debugInfo.textContent = `Immagini: ${loadedImages}/${imagesToLoad.length}`;
+    if (loadedImages === imagesToLoad.length) {
+        imagesReady = true;
+        if (debugInfo) debugInfo.textContent = 'TAP per iniziare 🎮';
     }
 }
+
+
 
 // Audio Context - LAZY: creato solo dopo gesto utente per evitare blocco Chrome/Android
 const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -529,37 +503,48 @@ function restartGame() {
 
 const tapOverlay = document.getElementById('tap-to-start');
 
-// Guard flag: impedisce doppia chiamata da touchstart+touchend sullo stesso tap
+// Guard flag
 let gameStarted = false;
 
-// Rileva se siamo dentro la WebView di Capacitor (APK Android)
+// Rileva Capacitor WebView
 const isCapacitor = !!(window.Capacitor || window.webkit?.messageHandlers?.capacitor);
 
-function startGame() {
+// Mostra schermata di loading sovrapposta al tap overlay
+function showLoadingScreen(text) {
+    const debugInfo = document.getElementById('debug-info');
+    if (debugInfo) debugInfo.textContent = text;
+}
+
+async function startGame() {
     if (gameStarted) return;
     gameStarted = true;
 
-    // Crea AudioContext SOLO ora (dopo gesto utente)
-    const ctx = getOrCreateAudioContext();
-    if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+    // 1. Crea AudioContext subito dopo il gesto
+    const actx = getOrCreateAudioContext();
+    if (actx.state === 'suspended') await actx.resume().catch(() => {});
 
-    // "Prime" ogni audio con null-check per sbloccare iOS/Android
-    Object.values(sfx).forEach(audio => {
-        if (!audio) return;
-        try {
-            if (audio.readyState < 4) audio.load();
-            const vol = audio.volume;
-            audio.volume = 0;
-            audio.play().then(() => {
-                audio.pause();
-                audio.currentTime = 0;
-                audio.volume = vol;
-            }).catch(() => {});
-        } catch(e) {}
+    // 2. Mostra feedback visivo mentre carichiamo i suoni
+    showLoadingScreen('Caricamento audio...');
+
+    // 3. Carica tutti i suoni ORA (dopo il gesto = policy audio sbloccata)
+    await loadAllAudio((done, total) => {
+        showLoadingScreen(`Audio: ${done}/${total}`);
     });
 
-    safePlayAudio(sfx.beginLevel);
+    // 4. Sblocca ogni audio element con un silent play (richiesto da Android WebView)
+    await Promise.all(Object.values(sfx).map(audio => {
+        if (!audio) return Promise.resolve();
+        return new Promise(resolve => {
+            const vol = audio.volume;
+            audio.volume = 0;
+            audio.play()
+                .then(() => { audio.pause(); audio.currentTime = 0; audio.volume = vol; resolve(); })
+                .catch(() => { audio.volume = vol; resolve(); });
+        });
+    }));
 
+    // 5. Avvia suono di inizio e nascondi overlay
+    safePlayAudio(sfx.beginLevel);
     document.body.classList.add('game-active');
 
     if (tapOverlay) {
@@ -569,36 +554,78 @@ function startGame() {
     const gameContainer = document.getElementById('game-container');
     if (gameContainer) gameContainer.style.display = 'flex';
 
-    // Fullscreen solo su browser, non in Capacitor (già gestito da MainActivity)
+    // 6. Fullscreen solo su browser
     if (!isCapacitor) {
         try {
-            if (document.documentElement.requestFullscreen) {
+            if (document.documentElement.requestFullscreen)
                 document.documentElement.requestFullscreen().catch(() => {});
-            } else if (document.documentElement.webkitRequestFullscreen) {
+            else if (document.documentElement.webkitRequestFullscreen)
                 document.documentElement.webkitRequestFullscreen();
-            }
         } catch(e) {}
     }
 
+    // 7. Avvia level e game loop
     if (!gameRunning) {
-        setGameRunning(true);
-        lastTime = 0;
-        accumulator = 0;
-        requestAnimationFrame(loop);
+        loadLevelScript(1);
     }
 }
+
+// ============================================================
+// RECOVERY: ritorno in foreground dopo background Android
+// Quando l'app torna visibile, ripristina AudioContext e
+// ricarica gli audio element che Android WebView ha rilasciato
+// ============================================================
+document.addEventListener('visibilitychange', async () => {
+    if (document.hidden) {
+        // App va in background: ferma tutto ordinatamente
+        stopAllSounds();
+        return;
+    }
+
+    // App torna in foreground
+    if (!gameStarted) return; // Non ancora partito, nulla da fare
+
+    console.log('🔄 App tornata in foreground - ripristino audio...');
+
+    // Ripristina AudioContext
+    const actx = getOrCreateAudioContext();
+    if (actx.state === 'suspended') await actx.resume().catch(() => {});
+
+    // Controlla se gli audio element sono stati rilasciati (readyState 0 = HAVE_NOTHING)
+    const needsReload = Object.values(sfx).some(a => a && a.readyState === 0);
+
+    if (needsReload) {
+        console.log('🔄 Audio rilasciati da Android - ricarico...');
+        // Ricarica solo i suoni persi
+        await Promise.all(Object.entries(audioDefinitions).map(([name, def]) => {
+            const audio = sfx[name];
+            if (!audio || audio.readyState > 0) return Promise.resolve();
+            return loadSingleAudio(name, def);
+        }));
+        // Sblocca di nuovo dopo il ricaricamento
+        await Promise.all(Object.values(sfx).map(audio => {
+            if (!audio) return Promise.resolve();
+            return new Promise(resolve => {
+                const vol = audio.volume;
+                audio.volume = 0;
+                audio.play()
+                    .then(() => { audio.pause(); audio.currentTime = 0; audio.volume = vol; resolve(); })
+                    .catch(() => { audio.volume = vol; resolve(); });
+            });
+        }));
+        console.log('✅ Audio ripristinato');
+    }
+});
 
 if (tapOverlay) {
     tapOverlay.classList.add('show');
 
-    // Solo touchstart (touchend causerebbe doppio fire)
     tapOverlay.addEventListener('touchstart', function(e) {
         e.preventDefault();
         e.stopPropagation();
         startGame();
     }, { passive: false });
 
-    // Fallback per desktop/click fisici
     tapOverlay.addEventListener('click', function(e) {
         e.preventDefault();
         startGame();
@@ -615,11 +642,11 @@ export function timerPowerUp() {
 export function updateKeyHUD() {
     const keyIndicator = document.querySelector('.key-indicator');
     if (!keyIndicator) return;
-    // L'immagine della chiave è gestita da CSS (background-image: url('png/key.png'))
-    // Basta aggiungere/rimuovere la classe has-key
     if (gameState.hasKey) {
+        keyIndicator.textContent = '🔑';
         keyIndicator.classList.add('has-key');
     } else {
+        keyIndicator.textContent = '◯';
         keyIndicator.classList.remove('has-key');
     }
 }
