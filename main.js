@@ -158,14 +158,12 @@ function checkStart() {
     }
 }
 
-// Audio Context - creato LAZY al primo tap per evitare blocco Chrome/Android
+// Audio Context - LAZY: creato solo dopo gesto utente per evitare blocco Chrome/Android
 const AudioContext = window.AudioContext || window.webkitAudioContext;
 let audioCtx = null;
 
 function getOrCreateAudioContext() {
-    if (!audioCtx) {
-        audioCtx = new AudioContext();
-    }
+    if (!audioCtx) audioCtx = new AudioContext();
     return audioCtx;
 }
 
@@ -236,11 +234,10 @@ export function safePlayAudio(audio) {
     // Se c'è già un play() in pending su questo elemento, non farne un altro
     if (_playingPromises.has(audio)) return;
 
-    // Per audio NON in loop (one-shot): clona l'elemento così può sovrapporsi a se stesso
-    // Per audio IN loop: usa l'elemento direttamente senza resettare currentTime
+    // One-shot (non loop): clona per permettere sovrapposizione senza AbortError
+    // Loop (walk/fly/lava): usa elemento direttamente, NON resettare currentTime
     let target = audio;
     if (!audio.loop) {
-        // One-shot: crea clone temporaneo per permettere sovrapposizione
         target = audio.cloneNode();
         target.volume = audio.volume;
     }
@@ -249,16 +246,10 @@ export function safePlayAudio(audio) {
     if (playPromise !== undefined) {
         _playingPromises.set(audio, true);
         playPromise
-            .then(() => {
-                _playingPromises.delete(audio);
-            })
+            .then(() => { _playingPromises.delete(audio); })
             .catch(err => {
                 _playingPromises.delete(audio);
-                if (err.name === 'NotAllowedError') {
-                    // Audio policy browser - normale prima del tap, silenzioso
-                } else if (err.name === 'AbortError') {
-                    // Interrotto da un pause() - normale, ignora
-                } else {
+                if (err.name !== 'NotAllowedError' && err.name !== 'AbortError') {
                     console.warn('Audio error:', err.name, err.message);
                 }
             });
@@ -483,6 +474,7 @@ function loop(timestamp) {
     
     draw(gameRunning);
     updateHUD(currentLevelNumber, gameRunning);
+    updateKeyHUD();
     requestAnimationFrame(loop);
 }
 
@@ -537,17 +529,17 @@ function restartGame() {
 
 const tapOverlay = document.getElementById('tap-to-start');
 
-// Guard flag: impedisce doppia chiamata da touchstart+click
+// Guard flag: impedisce doppia chiamata da touchstart+touchend sullo stesso tap
 let gameStarted = false;
 
-// Rileva Capacitor WebView (APK Android) per saltare requestFullscreen
-const isCapacitor = !!(window.Capacitor || (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.capacitor));
+// Rileva se siamo dentro la WebView di Capacitor (APK Android)
+const isCapacitor = !!(window.Capacitor || window.webkit?.messageHandlers?.capacitor);
 
 function startGame() {
     if (gameStarted) return;
     gameStarted = true;
 
-    // Crea AudioContext SOLO ora (dopo gesto utente) - evita blocco Chrome policy
+    // Crea AudioContext SOLO ora (dopo gesto utente)
     const ctx = getOrCreateAudioContext();
     if (ctx.state === 'suspended') ctx.resume().catch(() => {});
 
@@ -606,20 +598,28 @@ if (tapOverlay) {
         startGame();
     }, { passive: false });
 
-    // Fallback per desktop
+    // Fallback per desktop/click fisici
     tapOverlay.addEventListener('click', function(e) {
         e.preventDefault();
         startGame();
     });
 }
 
-// Export richiesto da player.js
+// Export richiesto da player.js per oggetto timer
 export function timerPowerUp() {
-    // Ripristina il power del giocatore (chiamato da oggetti timer nel livello)
-    if (gameState) {
-        gameState.power = Math.min(
-            gameState.maxPower,
-            gameState.power + (gameState.maxPower * 0.25)
-        );
+    gameState.power = Math.min(gameState.maxPower, gameState.power + (gameState.maxPower * 0.25));
+}
+
+// Aggiorna icona chiave nell'HUD (chiamata ogni frame da updateHUD in renderer.js
+// oppure direttamente qui nel loop se renderer non la gestisce)
+export function updateKeyHUD() {
+    const keyIndicator = document.querySelector('.key-indicator');
+    if (!keyIndicator) return;
+    // L'immagine della chiave è gestita da CSS (background-image: url('png/key.png'))
+    // Basta aggiungere/rimuovere la classe has-key
+    if (gameState.hasKey) {
+        keyIndicator.classList.add('has-key');
+    } else {
+        keyIndicator.classList.remove('has-key');
     }
 }
