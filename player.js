@@ -377,7 +377,7 @@ export function update(dt, showRetryButtonCallback, currentLevelNumber, loadLeve
         if (rectIntersect(player, l, true)) {
             touchingLava = true; // Player sta toccando la lava
             gameState.power -= LAVA_DAMAGE_PER_SECOND * dt;
-            if (sfx.lava.paused) safePlayAudio(sfx.lava);
+            if (sfx.lava && sfx.lava.paused) safePlayAudio(sfx.lava);
             
             // PARTICELLE ROSSE ogni tanto
             if (Math.random() < 0.1) { // 10% probabilità per frame
@@ -393,7 +393,12 @@ export function update(dt, showRetryButtonCallback, currentLevelNumber, loadLeve
         }
     });
     
-    player.isInLava = touchingLava; // Aggiorna lo stato
+    player.isInLava = touchingLava;
+    // Ferma il suono lava appena il player esce dalla lava
+    if (!touchingLava && sfx.lava && !sfx.lava.paused) {
+        sfx.lava.pause();
+        sfx.lava.currentTime = 0;
+    }
 
     // === OGGETTI ===
     items.forEach(item => { 

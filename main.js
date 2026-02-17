@@ -227,29 +227,41 @@ export function playSound(type) {
     }
 }
 
+// Set per tracciare play() in corso ed evitare AbortError a cascata
+const _playingPromises = new WeakMap();
+
 export function safePlayAudio(audio) {
     if (!audio) return;
-    
-    // FIX iOS: Assicurati che l'audio sia caricato prima di resettare currentTime
-    if (audio.readyState >= 2) { // HAVE_CURRENT_DATA
-        audio.currentTime = 0;
+
+    // Se c'è già un play() in pending su questo elemento, non farne un altro
+    if (_playingPromises.has(audio)) return;
+
+    // Per audio NON in loop (one-shot): clona l'elemento così può sovrapporsi a se stesso
+    // Per audio IN loop: usa l'elemento direttamente senza resettare currentTime
+    let target = audio;
+    if (!audio.loop) {
+        // One-shot: crea clone temporaneo per permettere sovrapposizione
+        target = audio.cloneNode();
+        target.volume = audio.volume;
     }
-    
-    const playPromise = audio.play();
+
+    const playPromise = target.play();
     if (playPromise !== undefined) {
-        playPromise.catch(err => {
-            // FIX iOS: Retry una volta se fallisce
-            if (err.name === 'NotAllowedError') {
-                console.warn('Audio blocked by browser policy');
-            } else if (err.name === 'AbortError') {
-                // Retry dopo breve delay
-                setTimeout(() => {
-                    audio.play().catch(e => console.warn('Audio retry failed:', e));
-                }, 100);
-            } else {
-                console.warn('Audio error:', err);
-            }
-        });
+        _playingPromises.set(audio, true);
+        playPromise
+            .then(() => {
+                _playingPromises.delete(audio);
+            })
+            .catch(err => {
+                _playingPromises.delete(audio);
+                if (err.name === 'NotAllowedError') {
+                    // Audio policy browser - normale prima del tap, silenzioso
+                } else if (err.name === 'AbortError') {
+                    // Interrotto da un pause() - normale, ignora
+                } else {
+                    console.warn('Audio error:', err.name, err.message);
+                }
+            });
     }
 }
 
@@ -263,8 +275,8 @@ export function stopAllSounds() {
 // Inizializza renderer
 initRenderer(canvas, ctx, sprites);
 
-// Inizializza input (audioCtx lazy, verrà creato al primo tap)
-initInput(null);
+// Inizializza input - passa getter lazy così joystick/fly possono fare resume audioCtx
+initInput(getOrCreateAudioContext);
 
 // LEVEL LOADING
 window.loadLevelData = function(data) { 

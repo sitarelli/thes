@@ -6,17 +6,24 @@
 
 import { keys } from './config.js';
 
-let audioCtx = null;
+let audioCtxGetter = null;
 
-export function initInput(audioContext) {
-    audioCtx = audioContext;
+function resumeAudio() {
+    try {
+        const ctx = audioCtxGetter ? audioCtxGetter() : null;
+        if (ctx && ctx.state === 'suspended') ctx.resume();
+    } catch(e) {}
+}
+
+export function initInput(audioContextGetter) {
+    audioCtxGetter = audioContextGetter;
     initKeyboard();
     initTouchControls();
 }
 
 function initKeyboard() {
     window.addEventListener('keydown', e => { 
-        if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume(); 
+        resumeAudio();
         if (e.code === 'ArrowRight') keys.right = true; 
         if (e.code === 'ArrowLeft') keys.left = true; 
         if (e.code === 'Space') keys.up = true; 
@@ -41,7 +48,7 @@ function initTouchControls() {
     const deadZone = 10; 
 
     joystickBase.addEventListener('touchstart', (e) => {
-        if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+        resumeAudio();
         e.preventDefault();
         startX = e.changedTouches[0].clientX;
     }, { passive: false });
@@ -78,7 +85,7 @@ function initTouchControls() {
     joystickBase.addEventListener('touchcancel', resetJoystick);
 
     btnFly.addEventListener('touchstart', (e) => { 
-        if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume(); 
+        resumeAudio();
         e.preventDefault(); 
         keys.up = true; 
     }, { passive: false });
