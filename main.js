@@ -559,10 +559,18 @@ function startGame() {
 
 if (tapOverlay) {
     tapOverlay.classList.add('show');
+    
+    // NUOVO: Aggiunto 'touchstart', fondamentale per sbloccare l'audio e partire su Android
+    tapOverlay.addEventListener('touchstart', function(e) { 
+        e.preventDefault(); 
+        startGame(); 
+    }, { passive: false });
+
     tapOverlay.addEventListener('touchend', function(e) { 
         e.preventDefault(); 
         startGame(); 
     }, { passive: false });
+    
     tapOverlay.addEventListener('click', function(e) { 
         e.preventDefault(); 
         startGame(); 
