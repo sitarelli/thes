@@ -1,5 +1,7 @@
 /* -------------------------------------------------------------------------- */
-/* GESTIONE INPUT (TASTIERA E TOUCH)                                          */
+/* GESTIONE INPUT (TASTIERA E TOUCH) - Versione APK Android                  */
+/* Rimossi: overlay rotazione, richiesta fullscreen, scrollTo iOS            */
+/* L'APK gestisce orientation=landscape e fullscreen tramite AndroidManifest */
 /* -------------------------------------------------------------------------- */
 
 import { keys } from './config.js';
@@ -10,7 +12,6 @@ export function initInput(audioContext) {
     audioCtx = audioContext;
     initKeyboard();
     initTouchControls();
-    initOrientation();
 }
 
 function initKeyboard() {
@@ -93,69 +94,6 @@ function initTouchControls() {
     });
 }
 
-function isMobileDevice() { 
-    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent); 
-}
-
-function isIOS() { 
-    return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream; 
-}
-
-// Rileva se siamo in un'app Capacitor (APK)
-function isCapacitor() {
-    return window.Capacitor !== undefined;
-}
-
-function checkOrientation() {
-    // SE SIAMO IN APK (Capacitor), NON mostrare l'overlay rotazione
-    // perché l'orientamento è già forzato dal manifest
-    if (isCapacitor()) {
-        const rotateMsg = document.getElementById('rotate-message');
-        if (rotateMsg) rotateMsg.style.display = 'none';
-        return;
-    }
-    
-    // SOLO su browser web: mostra overlay se verticale
-    const rotateMsg = document.getElementById('rotate-message');
-    if (rotateMsg && window.innerWidth < 900) {
-        if (window.innerHeight > window.innerWidth) rotateMsg.style.display = 'flex';
-        else rotateMsg.style.display = 'none';
-    }
-}
-
-function initOrientation() {
-    window.addEventListener('load', checkOrientation);
-    window.addEventListener('resize', checkOrientation);
-    window.addEventListener('orientationchange', checkOrientation);
-
-    if (isIOS()) {
-        window.addEventListener('load', () => setTimeout(() => window.scrollTo(0, 1), 100));
-        window.addEventListener('touchstart', () => { 
-            if (fullscreenActivated) setTimeout(() => window.scrollTo(0, 1), 0); 
-        });
-        window.addEventListener('resize', () => { 
-            if (fullscreenActivated) setTimeout(() => window.scrollTo(0, 1), 0); 
-        });
-    }
-}
-
-// Fullscreen
-let fullscreenActivated = false;
-
-export function requestFullscreen() {
-    // NON richiedere fullscreen se siamo in APK (è già fullscreen)
-    if (isCapacitor()) return;
-    
-    const elem = document.documentElement;
-    if (isMobileDevice()) {
-        if (elem.requestFullscreen) {
-            elem.requestFullscreen().catch(err => console.log('Fullscreen failed:', err));
-        } else if (elem.webkitRequestFullscreen) {
-            elem.webkitRequestFullscreen();
-        }
-    }
-}
-
-export function setFullscreenActivated(value) {
-    fullscreenActivated = value;
-}
+// Stub esportati per compatibilità con main.js (non fanno nulla nell'APK)
+export function requestFullscreen() {}
+export function setFullscreenActivated(value) {}

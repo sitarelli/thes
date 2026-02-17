@@ -19,13 +19,6 @@ console.log('🎮 Setup Canvas:', {
 });
 
 
-// Mostra hint F11 solo su desktop
-if (!/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
-    const hint = document.createElement('div');
-    hint.textContent = 'PREMI F11 PER ANDARE A SCHERMO INTERO';
-    hint.style.cssText = 'text-align: center; margin-top: 10px; font-size: 12px; color: #888; font-family: Orbitron, sans-serif;';
-    document.getElementById('game-container').appendChild(hint);
-}
 
 const dpr = window.devicePixelRatio || 1;
 canvas.width = config.viewportWidth * dpr;
@@ -521,15 +514,7 @@ function restartGame() {
 }
 
 // TAP TO START
-function isMobileDevice() { 
-    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent); 
-}
 
-function isIOS() { 
-    return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream; 
-}
-
-let fullscreenActivated = false;
 const tapOverlay = document.getElementById('tap-to-start');
 
 function startGame() {
@@ -563,12 +548,6 @@ function startGame() {
     }
     const gameContainer = document.getElementById('game-container');
     if (gameContainer) gameContainer.style.display = 'flex';
-    
-    setTimeout(() => requestFullscreen(), 100);
-    fullscreenActivated = true;
-    setFullscreenActivated(true);
-    
-    if (isIOS()) setTimeout(() => window.scrollTo(0, 1), 200);
     
     if (!gameRunning) { 
         setGameRunning(true);
