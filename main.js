@@ -19,13 +19,6 @@ console.log('🎮 Setup Canvas:', {
 });
 
 
-// Mostra hint F11 solo su desktop
-if (!/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
-    const hint = document.createElement('div');
-    hint.textContent = 'PREMI F11 PER ANDARE A SCHERMO INTERO';
-    hint.style.cssText = 'text-align: center; margin-top: 10px; font-size: 12px; color: #888; font-family: Orbitron, sans-serif;';
-    document.getElementById('game-container').appendChild(hint);
-}
 
 const dpr = window.devicePixelRatio || 1;
 canvas.width = config.viewportWidth * dpr;
@@ -65,118 +58,110 @@ imagesToLoad.forEach(imgData => {
     sprites[imgData.name] = img;
 });
 
-// --- AUDIO CON FALLBACK OGG → MP3 ---
+// --- DEFINIZIONI AUDIO (solo OGG) ---
 const audioDefinitions = {
-    doorOpen: { files: ['audio/dooropen.ogg', 'audio/dooropen.mp3'], volume: 0.6 },
-    doorClose: { files: ['audio/doorclose.ogg', 'audio/doorclose.mp3'], volume: 0.6 },
-    walk: { files: ['audio/walkingthes.ogg', 'audio/walkingthes.mp3'], volume: 0.4, loop: true },
-    fly: { files: ['audio/flyingthes.ogg', 'audio/flyingthes.m4a'], volume: 0.5, loop: true },
-    levelup: { files: ['audio/levelup.ogg', 'audio/levelup.mp3'], volume: 0.7 },
-    beginLevel: { files: ['audio/beginlevel.ogg', 'audio/beginlevel.mp3'], volume: 0.7 },
-    keyPickup: { files: ['audio/key.ogg', 'audio/key.mp3'], volume: 0.6 },
-    death: { files: ['audio/death.ogg', 'audio/death.mp3'], volume: 0.7 },
-    contact: { files: ['audio/contact.ogg', 'audio/contact.mp3'], volume: 0.6 },
-    lava: { files: ['audio/lava.ogg', 'audio/lava.mp3'], volume: 0.5 },
-    timer: { files: ['audio/timer.ogg'], volume: 0.8, loop: true }
+    doorOpen:   { src: 'audio/dooropen.ogg',    volume: 0.6 },
+    doorClose:  { src: 'audio/doorclose.ogg',   volume: 0.6 },
+    walk:       { src: 'audio/walkingthes.ogg', volume: 0.4, loop: true },
+    fly:        { src: 'audio/flyingthes.ogg',  volume: 0.5, loop: true },
+    levelup:    { src: 'audio/levelup.ogg',     volume: 0.7 },
+    beginLevel: { src: 'audio/beginlevel.ogg',  volume: 0.7 },
+    keyPickup:  { src: 'audio/key.ogg',         volume: 0.6 },
+    death:      { src: 'audio/death.ogg',       volume: 0.7 },
+    contact:    { src: 'audio/contact.ogg',     volume: 0.6 },
+    lava:       { src: 'audio/lava.ogg',        volume: 0.5, loop: true }
 };
 
 export const sfx = {};
 
-// Stato power-up timer (stile Pac-Man): blocca nemici per 10 secondi
-export const timerPowerUp = {
-    active: false,
-    timeLeft: 0   // secondi rimanenti
-};
-let loadedAudio = 0;
-const audioToLoad = Object.keys(audioDefinitions).length;
+// Crea gli elementi Audio subito (src non ancora caricato)
+// Li popoliamo dentro loadAllAudio() dopo il tap
+Object.keys(audioDefinitions).forEach(name => { sfx[name] = null; });
 
-// Funzione per caricare un audio con fallback multi-formato
-function loadAudioWithFallback(name, config) {
-    const audio = new Audio();
-    audio.volume = config.volume || 1.0;
-    audio.loop = config.loop || false;
-    audio.preload = 'auto';
-    
-    let formatIndex = 0;
-    
-    const tryNextFormat = () => {
-        if (formatIndex >= config.files.length) {
-            console.warn(`⚠️ Audio ${name} non caricato (tutti i formati falliti)`);
-            sfx[name] = null;
-            loadedAudio++;
-            updateProgress();
-            return;
-        }
-        
-        const src = config.files[formatIndex];
-        audio.src = src;
-        
-        const timeout = setTimeout(() => {
-            console.warn(`⏱️ Timeout ${src}, provo successivo...`);
-            formatIndex++;
-            tryNextFormat();
-        }, 2000);
-        
-        const onSuccess = () => {
-            clearTimeout(timeout);
-            console.log(`✅ Audio ${name} caricato: ${src}`);
+// Carica un singolo audio, restituisce Promise
+function loadSingleAudio(name, def) {
+    return new Promise(resolve => {
+        const audio = new Audio();
+        audio.volume = def.volume || 1.0;
+        audio.loop = def.loop || false;
+        audio.preload = 'auto';
+
+        let resolved = false;
+        const done = () => {
+            if (resolved) return;
+            resolved = true;
+            console.log(`✅ ${name}: ${def.src}`);
             sfx[name] = audio;
-            loadedAudio++;
-            updateProgress();
-            cleanup();
+            resolve();
         };
-        
-        const onError = () => {
-            clearTimeout(timeout);
-            console.warn(`❌ Errore ${src}`);
-            formatIndex++;
-            tryNextFormat();
-            cleanup();
+        const fail = () => {
+            if (resolved) return;
+            resolved = true;
+            console.warn(`❌ ${name}: ${def.src} fallito`);
+            sfx[name] = null;
+            resolve();
         };
-        
-        const cleanup = () => {
-            audio.removeEventListener('canplaythrough', onSuccess);
-            audio.removeEventListener('error', onError);
-        };
-        
-        audio.addEventListener('canplaythrough', onSuccess, { once: true });
-        audio.addEventListener('error', onError, { once: true });
+
+        // canplaythrough = ideale ma non sempre scatta su Android per file lunghi
+        audio.addEventListener('canplaythrough', done, { once: true });
+        // loadeddata = fallback: ha abbastanza dati per partire anche senza buffer completo
+        audio.addEventListener('loadeddata', done, { once: true });
+        audio.addEventListener('error', fail, { once: true });
+
+        // Timeout generoso: 8s per WebView lenti o connessioni APK lente
+        setTimeout(() => {
+            if (!resolved) {
+                // Ultimo tentativo: se readyState >= 2 (HAVE_CURRENT_DATA) usalo lo stesso
+                if (audio.readyState >= 2) {
+                    done();
+                } else {
+                    fail();
+                }
+            }
+        }, 8000);
+
+        audio.src = def.src; // src DOPO i listener, così loadeddata non si perde
         audio.load();
-    };
-    
-    tryNextFormat();
+    });
 }
 
-// Carica tutti gli audio
-Object.entries(audioDefinitions).forEach(([name, config]) => {
-    loadAudioWithFallback(name, config);
-});
+// Carica TUTTI gli audio, aggiorna il debug text, risolve quando tutti pronti
+function loadAllAudio(onProgress) {
+    const entries = Object.entries(audioDefinitions);
+    let done = 0;
+    return Promise.all(entries.map(([name, def]) =>
+        loadSingleAudio(name, def).then(() => {
+            done++;
+            if (onProgress) onProgress(done, entries.length);
+        })
+    ));
+}
 
-// PROGRESS BAR
+// PROGRESS IMMAGINI - loadedImages già dichiarato sopra con gli sprites
+let imagesReady = false;
+
 function updateProgress() {
-    const total = imagesToLoad.length + audioToLoad;
-    const loaded = loadedImages + loadedAudio;
-    const percent = Math.floor((loaded / total) * 100);
     const debugInfo = document.getElementById('debug-info');
-    if (debugInfo) debugInfo.textContent = `Caricamento: ${percent}%`;
-    checkStart();
-}
-
-function checkStart() { 
-    const total = imagesToLoad.length + audioToLoad;
-    const loaded = loadedImages + loadedAudio;
-    if (loaded === total) {
-        const debugInfo = document.getElementById('debug-info');
-        if (debugInfo) debugInfo.textContent = 'Pronto! 🎮';
-        loadLevelScript(1);
+    if (debugInfo) debugInfo.textContent = `Immagini: ${loadedImages}/${imagesToLoad.length}`;
+    if (loadedImages === imagesToLoad.length) {
+        imagesReady = true;
+        if (debugInfo) debugInfo.textContent = 'TAP per iniziare 🎮';
     }
 }
 
-// Audio Context
+
+
+// Audio Context - LAZY: creato solo dopo gesto utente per evitare blocco Chrome/Android
 const AudioContext = window.AudioContext || window.webkitAudioContext;
-const audioCtx = new AudioContext();
+let audioCtx = null;
+
+function getOrCreateAudioContext() {
+    if (!audioCtx) audioCtx = new AudioContext();
+    return audioCtx;
+}
 
 export function playSound(type) {
+    const audioCtx = getOrCreateAudioContext();
     if (audioCtx.state === 'suspended') audioCtx.resume();
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
@@ -233,27 +218,42 @@ export function playSound(type) {
     }
 }
 
+// Throttle one-shot: evita cloni multipli dello stesso suono nello stesso frame
+const _oneShotThrottle = new WeakSet();
+
 export function safePlayAudio(audio) {
     if (!audio) return;
-    
-    // FIX iOS: Assicurati che l'audio sia caricato prima di resettare currentTime
-    if (audio.readyState >= 2) { // HAVE_CURRENT_DATA
-        audio.currentTime = 0;
+
+    // Guard: audio non caricato (readyState 0 = HAVE_NOTHING)
+    if (audio.readyState === 0) {
+        console.warn('safePlayAudio: audio non ancora caricato, skip');
+        return;
     }
-    
-    const playPromise = audio.play();
-    if (playPromise !== undefined) {
-        playPromise.catch(err => {
-            // FIX iOS: Retry una volta se fallisce
-            if (err.name === 'NotAllowedError') {
-                console.warn('Audio blocked by browser policy');
-            } else if (err.name === 'AbortError') {
-                // Retry dopo breve delay
-                setTimeout(() => {
-                    audio.play().catch(e => console.warn('Audio retry failed:', e));
-                }, 100);
-            } else {
-                console.warn('Audio error:', err);
+
+    if (audio.loop) {
+        // === AUDIO IN LOOP (walk, fly, lava, timer) ===
+        // Usa l'elemento direttamente. Se già in play non fare nulla.
+        if (!audio.paused) return;
+        audio.play().catch(err => {
+            if (err.name !== 'NotAllowedError' && err.name !== 'AbortError') {
+                console.warn(`Loop audio error [${err.name}]:`, err.message);
+            }
+        });
+    } else {
+        // === AUDIO ONE-SHOT (contact, key, door, death, ecc.) ===
+        // Clona per permettere sovrapposizione. Throttle: 1 clone attivo per tipo.
+        if (_oneShotThrottle.has(audio)) return;
+        _oneShotThrottle.add(audio);
+
+        const clone = audio.cloneNode();
+        clone.volume = audio.volume;
+        clone.addEventListener('ended',  () => _oneShotThrottle.delete(audio), { once: true });
+        clone.addEventListener('error',  () => _oneShotThrottle.delete(audio), { once: true });
+
+        clone.play().catch(err => {
+            _oneShotThrottle.delete(audio);
+            if (err.name !== 'NotAllowedError' && err.name !== 'AbortError') {
+                console.warn(`One-shot audio error [${err.name}]:`, err.message);
             }
         });
     }
@@ -261,16 +261,16 @@ export function safePlayAudio(audio) {
 
 export function stopAllSounds() {
     Object.values(sfx).forEach(audio => {
-        audio.pause();
-        audio.currentTime = 0;
+        if (!audio) return;
+        try { audio.pause(); audio.currentTime = 0; } catch(e) {}
     });
 }
 
 // Inizializza renderer
 initRenderer(canvas, ctx, sprites);
 
-// Inizializza input
-initInput(audioCtx);
+// Inizializza input - passa getter lazy così joystick/fly possono fare resume audioCtx
+initInput(getOrCreateAudioContext);
 
 // LEVEL LOADING
 window.loadLevelData = function(data) { 
@@ -347,10 +347,6 @@ function initGame(levelData) {
     setDustParticles([]); // Reset particelle di polvere
     setFireworkParticles([]); // Reset fuochi d'artificio
     setColorParticles([]); // Reset particelle colorate
-    // Reset power-up timer
-    timerPowerUp.active = false;
-    timerPowerUp.timeLeft = 0;
-    if (sfx.timer && !sfx.timer.paused) { sfx.timer.pause(); sfx.timer.currentTime = 0; }
 
     const currentMap = levelData.map;
     const rows = currentMap.length;
@@ -481,6 +477,7 @@ function loop(timestamp) {
     
     draw(gameRunning);
     updateHUD(currentLevelNumber, gameRunning);
+    updateKeyHUD();
     requestAnimationFrame(loop);
 }
 
@@ -532,71 +529,167 @@ function restartGame() {
 }
 
 // TAP TO START
-function isMobileDevice() { 
-    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent); 
-}
 
-function isIOS() { 
-    return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream; 
-}
-
-let fullscreenActivated = false;
 const tapOverlay = document.getElementById('tap-to-start');
 
-function startGame() {
-    if (audioCtx.state === 'suspended') audioCtx.resume();
-    
-    // FIX iOS: Forza caricamento COMPLETO di tutti gli audio al primo tap
-    // Questo risolve il problema di audio "pigri" su iOS
-    Object.values(sfx).forEach(audio => {
-        if (audio.readyState < 4) { // HAVE_ENOUGH_DATA
-            audio.load();
-        }
-        // "Prime" ogni audio riproducendolo a volume 0 per 1ms
-        // iOS richiede questo trucco per sbloccare completamente l'audio
-        const originalVolume = audio.volume;
-        audio.volume = 0;
-        audio.play().then(() => {
-            audio.pause();
-            audio.currentTime = 0;
-            audio.volume = originalVolume;
-        }).catch(() => {}); // Ignora errori
+// Guard flag
+let gameStarted = false;
+
+// Rileva Capacitor WebView
+const isCapacitor = !!(window.Capacitor || window.webkit?.messageHandlers?.capacitor);
+
+// Mostra schermata di loading sovrapposta al tap overlay
+function showLoadingScreen(text) {
+    const debugInfo = document.getElementById('debug-info');
+    if (debugInfo) debugInfo.textContent = text;
+}
+
+async function startGame() {
+    if (gameStarted) return;
+    gameStarted = true;
+
+    // 1. Crea AudioContext subito dopo il gesto
+    const actx = getOrCreateAudioContext();
+    if (actx.state === 'suspended') await actx.resume().catch(() => {});
+
+    // 2. Mostra feedback visivo mentre carichiamo i suoni
+    showLoadingScreen('Caricamento audio...');
+
+    // 3. Carica tutti i suoni ORA (dopo il gesto = policy audio sbloccata)
+    await loadAllAudio((done, total) => {
+        showLoadingScreen(`Audio: ${done}/${total}`);
     });
-    
+
+    // 4. Sblocca ogni audio element con un silent play (richiesto da Android WebView)
+    //    Chiamata diretta, NON tramite safePlayAudio, per non sporcare il throttle
+    await Promise.all(Object.values(sfx).map(audio => {
+        if (!audio) return Promise.resolve();
+        return new Promise(resolve => {
+            const vol = audio.volume;
+            audio.volume = 0;
+            const p = audio.play();
+            if (p !== undefined) {
+                p.then(() => {
+                    audio.pause();
+                    // Reset currentTime solo se readyState lo permette
+                    try { audio.currentTime = 0; } catch(e) {}
+                    audio.volume = vol;
+                    resolve();
+                }).catch(() => {
+                    audio.volume = vol;
+                    resolve();
+                });
+            } else {
+                audio.volume = vol;
+                resolve();
+            }
+        });
+    }));
+
+    // 5. Avvia suono di inizio e nascondi overlay
     safePlayAudio(sfx.beginLevel);
-    
-    // Nascondi cursore durante il gioco
     document.body.classList.add('game-active');
-    
+
     if (tapOverlay) {
         tapOverlay.classList.remove('show');
-        setTimeout(() => tapOverlay.style.display = 'none', 300);
+        setTimeout(() => { tapOverlay.style.display = 'none'; }, 300);
     }
     const gameContainer = document.getElementById('game-container');
     if (gameContainer) gameContainer.style.display = 'flex';
-    
-    setTimeout(() => requestFullscreen(), 100);
-    fullscreenActivated = true;
-    setFullscreenActivated(true);
-    
-    if (isIOS()) setTimeout(() => window.scrollTo(0, 1), 200);
-    
-    if (!gameRunning) { 
-        setGameRunning(true);
-        lastTime = 0; 
-        accumulator = 0; 
-        requestAnimationFrame(loop); 
+
+    // 6. Fullscreen solo su browser
+    if (!isCapacitor) {
+        try {
+            if (document.documentElement.requestFullscreen)
+                document.documentElement.requestFullscreen().catch(() => {});
+            else if (document.documentElement.webkitRequestFullscreen)
+                document.documentElement.webkitRequestFullscreen();
+        } catch(e) {}
+    }
+
+    // 7. Avvia level e game loop
+    if (!gameRunning) {
+        loadLevelScript(1);
     }
 }
 
+// ============================================================
+// RECOVERY: ritorno in foreground dopo background Android
+// Quando l'app torna visibile, ripristina AudioContext e
+// ricarica gli audio element che Android WebView ha rilasciato
+// ============================================================
+document.addEventListener('visibilitychange', async () => {
+    if (document.hidden) {
+        // App va in background: ferma tutto ordinatamente
+        stopAllSounds();
+        return;
+    }
+
+    // App torna in foreground
+    if (!gameStarted) return; // Non ancora partito, nulla da fare
+
+    console.log('🔄 App tornata in foreground - ripristino audio...');
+
+    // Ripristina AudioContext
+    const actx = getOrCreateAudioContext();
+    if (actx.state === 'suspended') await actx.resume().catch(() => {});
+
+    // Controlla se gli audio element sono stati rilasciati (readyState 0 = HAVE_NOTHING)
+    const needsReload = Object.values(sfx).some(a => a && a.readyState === 0);
+
+    if (needsReload) {
+        console.log('🔄 Audio rilasciati da Android - ricarico...');
+        // Ricarica solo i suoni persi
+        await Promise.all(Object.entries(audioDefinitions).map(([name, def]) => {
+            const audio = sfx[name];
+            if (!audio || audio.readyState > 0) return Promise.resolve();
+            return loadSingleAudio(name, def);
+        }));
+        // Sblocca di nuovo dopo il ricaricamento
+        await Promise.all(Object.values(sfx).map(audio => {
+            if (!audio) return Promise.resolve();
+            return new Promise(resolve => {
+                const vol = audio.volume;
+                audio.volume = 0;
+                audio.play()
+                    .then(() => { audio.pause(); audio.currentTime = 0; audio.volume = vol; resolve(); })
+                    .catch(() => { audio.volume = vol; resolve(); });
+            });
+        }));
+        console.log('✅ Audio ripristinato');
+    }
+});
+
 if (tapOverlay) {
     tapOverlay.classList.add('show');
-    tapOverlay.addEventListener('touchend', function(e) { 
-        e.preventDefault(); 
-        startGame(); 
+
+    tapOverlay.addEventListener('touchstart', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        startGame();
     }, { passive: false });
-    tapOverlay.addEventListener('click', function(e) { 
-        e.preventDefault(); 
-        startGame(); 
+
+    tapOverlay.addEventListener('click', function(e) {
+        e.preventDefault();
+        startGame();
     });
+}
+
+// Export richiesto da player.js per oggetto timer
+export function timerPowerUp() {
+    gameState.power = Math.min(gameState.maxPower, gameState.power + (gameState.maxPower * 0.25));
+}
+
+// Aggiorna icona chiave nell'HUD (chiamata ogni frame da updateHUD in renderer.js
+// oppure direttamente qui nel loop se renderer non la gestisce)
+export function updateKeyHUD() {
+    const keyIndicator = document.querySelector('.key-indicator');
+    if (!keyIndicator) return;
+    if (gameState.hasKey) {
+        keyIndicator.textContent = '🔑';
+        keyIndicator.classList.add('has-key');
+    } else {
+        keyIndicator.textContent = '◯';
+        keyIndicator.classList.remove('has-key');
+    }
 }
