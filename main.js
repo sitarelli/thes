@@ -69,7 +69,8 @@ const audioDefinitions = {
     keyPickup:  { src: 'audio/key.ogg',         volume: 0.6 },
     death:      { src: 'audio/death.ogg',       volume: 0.7 },
     contact:    { src: 'audio/contact.ogg',     volume: 0.6 },
-    lava:       { src: 'audio/lava.ogg',        volume: 0.5, loop: true }
+    lava:       { src: 'audio/lava.ogg',        volume: 0.5, loop: true },
+    timer:      { src: 'audio/timer.ogg',       volume: 0.8, loop: true }
 };
 
 export const sfx = {};
@@ -318,6 +319,10 @@ function initGame(levelData) {
     setDustParticles([]); // Reset particelle di polvere
     setFireworkParticles([]); // Reset fuochi d'artificio
     setColorParticles([]); // Reset particelle colorate
+    // Reset power-up timer
+    timerPowerUp.active = false;
+    timerPowerUp.timeLeft = 0;
+    if (sfx.timer && !sfx.timer.paused) { sfx.timer.pause(); sfx.timer.currentTime = 0; }
 
     const currentMap = levelData.map;
     const rows = currentMap.length;
@@ -632,10 +637,11 @@ if (tapOverlay) {
     });
 }
 
-// Export richiesto da player.js per oggetto timer
-export function timerPowerUp() {
-    gameState.power = Math.min(gameState.maxPower, gameState.power + (gameState.maxPower * 0.25));
-}
+// Stato power-up timer (stile Pac-Man): blocca nemici per 10 secondi
+export const timerPowerUp = {
+    active: false,
+    timeLeft: 0   // secondi rimanenti
+};
 
 // Aggiorna icona chiave nell'HUD (chiamata ogni frame da updateHUD in renderer.js
 // oppure direttamente qui nel loop se renderer non la gestisce)
