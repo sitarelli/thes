@@ -4,7 +4,7 @@
 
 import { config, keys, player, gameState, camera, currentMap, items, enemies, lavas, triggers, decorations, lavaParticles, dustParticles, fireworkParticles, colorParticles, cameraShake, lavaAnimTime } from './config.js';
 import { getTile as getMapTile } from './map.js';
-import { safePlayAudio, sfx, playSound, stopAllSounds } from './main.js';
+import { safePlayAudio, sfx, playSound, stopAllSounds, timerPowerUp } from './main.js';
 
 // Override locale di getTile che considera anche le porte
 export function getTile(px, py) {
@@ -217,6 +217,19 @@ export function update(dt, showRetryButtonCallback, currentLevelNumber, loadLeve
         player.damageCooldown -= dt;
     }
 
+    // === TIMER POWER-UP (Pac-Man): countdown 10 secondi, poi stop audio ===
+    if (timerPowerUp.active) {
+        timerPowerUp.timeLeft -= dt;
+        if (timerPowerUp.timeLeft <= 0) {
+            timerPowerUp.timeLeft = 0;
+            timerPowerUp.active = false;
+            if (sfx.timer && !sfx.timer.paused) {
+                sfx.timer.pause();
+                sfx.timer.currentTime = 0;
+            }
+        }
+    }
+
     // === POWER EROSION (THESEUS CORE MECHANIC) ===
     const POWER_DRAIN_PER_SECOND = 0.003; 
     gameState.power -= POWER_DRAIN_PER_SECOND * dt;
@@ -341,13 +354,16 @@ export function update(dt, showRetryButtonCallback, currentLevelNumber, loadLeve
     const ENEMY_HIT_DAMAGE = 0.25;
 
     enemies.forEach(en => {
-        en.x += en.vx; 
-        en.y += en.vy;
+        // === PAC-MAN: nemici congelati durante il power-up timer ===
+        if (!timerPowerUp.active) {
+            en.x += en.vx; 
+            en.y += en.vy;
 
-        if (en.vx > 0 && (getTile(en.x + en.w, en.y) || getTile(en.x + en.w, en.y + en.h - 1))) en.vx *= -1;
-        else if (en.vx < 0 && (getTile(en.x, en.y) || getTile(en.x, en.y + en.h - 1))) en.vx *= -1;
-        if (en.vy > 0 && (getTile(en.x, en.y + en.h) || getTile(en.x + en.w - 1, en.y + en.h))) en.vy *= -1;
-        else if (en.vy < 0 && (getTile(en.x, en.y) || getTile(en.x + en.w - 1, en.y))) en.vy *= -1;
+            if (en.vx > 0 && (getTile(en.x + en.w, en.y) || getTile(en.x + en.w, en.y + en.h - 1))) en.vx *= -1;
+            else if (en.vx < 0 && (getTile(en.x, en.y) || getTile(en.x, en.y + en.h - 1))) en.vx *= -1;
+            if (en.vy > 0 && (getTile(en.x, en.y + en.h) || getTile(en.x + en.w - 1, en.y + en.h))) en.vy *= -1;
+            else if (en.vy < 0 && (getTile(en.x, en.y) || getTile(en.x + en.w - 1, en.y))) en.vy *= -1;
+        }
 
         // COLLISIONE NEMICO
         if (rectIntersect(player, en, true)) {
@@ -425,8 +441,16 @@ export function update(dt, showRetryButtonCallback, currentLevelNumber, loadLeve
                 playSound('bonus'); 
             }
             else if (item.type === 'timer') { 
-                restorePower(0.1); 
-                playSound('bonus'); 
+                restorePower(0.1);
+                // === POWER-UP PAC-MAN: blocca nemici per 10 secondi ===
+                timerPowerUp.active = true;
+                timerPowerUp.timeLeft = 10;
+                if (sfx.timer) {
+                    sfx.timer.currentTime = 0;
+                    safePlayAudio(sfx.timer);
+                } else {
+                    playSound('bonus'); // fallback se audio non caricato
+                }
             }
         } 
     });

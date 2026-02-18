@@ -76,10 +76,17 @@ const audioDefinitions = {
     keyPickup: { files: ['audio/key.ogg', 'audio/key.mp3'], volume: 0.6 },
     death: { files: ['audio/death.ogg', 'audio/death.mp3'], volume: 0.7 },
     contact: { files: ['audio/contact.ogg', 'audio/contact.mp3'], volume: 0.6 },
-    lava: { files: ['audio/lava.ogg', 'audio/lava.mp3'], volume: 0.5 }
+    lava: { files: ['audio/lava.ogg', 'audio/lava.mp3'], volume: 0.5 },
+    timer: { files: ['audio/timer.ogg'], volume: 0.8, loop: true }
 };
 
 export const sfx = {};
+
+// Stato power-up timer (stile Pac-Man): blocca nemici per 10 secondi
+export const timerPowerUp = {
+    active: false,
+    timeLeft: 0   // secondi rimanenti
+};
 let loadedAudio = 0;
 const audioToLoad = Object.keys(audioDefinitions).length;
 
@@ -340,6 +347,10 @@ function initGame(levelData) {
     setDustParticles([]); // Reset particelle di polvere
     setFireworkParticles([]); // Reset fuochi d'artificio
     setColorParticles([]); // Reset particelle colorate
+    // Reset power-up timer
+    timerPowerUp.active = false;
+    timerPowerUp.timeLeft = 0;
+    if (sfx.timer && !sfx.timer.paused) { sfx.timer.pause(); sfx.timer.currentTime = 0; }
 
     const currentMap = levelData.map;
     const rows = currentMap.length;
