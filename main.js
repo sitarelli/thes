@@ -201,33 +201,44 @@ export function playSound(type) {
 }
 
 // Set per tracciare play() in corso ed evitare AbortError a cascata
-const _playingPromises = new WeakMap();
+const _playingSet = new WeakSet();
 
 export function safePlayAudio(audio) {
     if (!audio) return;
 
-    // Se c'è già un play() in pending su questo elemento, non farne un altro
-    if (_playingPromises.has(audio)) return;
+    // Guard: audio non ancora caricato su Android WebView
+    if (audio.readyState === 0) return;
 
-    // One-shot (non loop): clona per permettere sovrapposizione senza AbortError
-    // Loop (walk/fly/lava): usa elemento direttamente, NON resettare currentTime
-    let target = audio;
-    if (!audio.loop) {
-        target = audio.cloneNode();
-        target.volume = audio.volume;
-    }
-
-    const playPromise = target.play();
-    if (playPromise !== undefined) {
-        _playingPromises.set(audio, true);
-        playPromise
-            .then(() => { _playingPromises.delete(audio); })
-            .catch(err => {
-                _playingPromises.delete(audio);
+    if (audio.loop) {
+        // Audio in loop (walk/fly/lava/timer): usa elemento direttamente
+        // NON clonare, NON resettare currentTime se già in play
+        if (!audio.paused) return; // già in riproduzione, non fare nulla
+        const p = audio.play();
+        if (p !== undefined) {
+            p.catch(err => {
                 if (err.name !== 'NotAllowedError' && err.name !== 'AbortError') {
-                    console.warn('Audio error:', err.name, err.message);
+                    console.warn('Audio loop error:', err.name);
                 }
             });
+        }
+    } else {
+        // Audio one-shot: clona per sovrapposizione senza AbortError
+        // Ma solo se non c'è già una copia in play (throttle)
+        if (_playingSet.has(audio)) return;
+        const clone = audio.cloneNode();
+        clone.volume = audio.volume;
+        _playingSet.add(audio);
+        const p = clone.play();
+        if (p !== undefined) {
+            p.then(() => {
+                clone.addEventListener('ended', () => _playingSet.delete(audio), { once: true });
+            }).catch(err => {
+                _playingSet.delete(audio);
+                if (err.name !== 'NotAllowedError' && err.name !== 'AbortError') {
+                    console.warn('Audio one-shot error:', err.name);
+                }
+            });
+        }
     }
 }
 
@@ -640,7 +651,7 @@ if (tapOverlay) {
 // Stato power-up timer (stile Pac-Man): blocca nemici per 10 secondi
 export const timerPowerUp = {
     active: false,
-    timeLeft: 0   // secondi rimanenti
+    timeLeft: 0
 };
 
 // Aggiorna icona chiave nell'HUD (chiamata ogni frame da updateHUD in renderer.js

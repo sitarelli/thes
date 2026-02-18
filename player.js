@@ -165,26 +165,21 @@ export function winLevel(d, currentLevelNumber, loadLevelScript) {
     gameState.vW = d.w; 
     gameState.vH = d.h;
     
-    sfx.walk && sfx.walk.pause(); 
-    sfx.fly && sfx.fly.pause();
+    if (sfx.walk) sfx.walk.pause(); 
+    if (sfx.fly) sfx.fly.pause();
+    if (sfx.lava) sfx.lava.pause();
     
-    // FIX iOS: Assicurati che levelup sia completamente fermo prima di suonare
-    if (sfx.levelup) { sfx.levelup.pause(); sfx.levelup.currentTime = 0; }
+    if (sfx.levelup) {
+        try { sfx.levelup.pause(); sfx.levelup.currentTime = 0; } catch(e) {}
+    }
     
-    // Piccolo delay per iOS
     setTimeout(() => {
         safePlayAudio(sfx.levelup);
     }, 50);
     
     setTimeout(() => {
-        // FIX iOS: Fade out graduale invece di pause brusco
-        if (sfx.levelup && !sfx.levelup.paused) {
-            sfx.levelup.volume = Math.max(0, sfx.levelup.volume - 0.1);
-            if (sfx.levelup.volume > 0.1) {
-                setTimeout(() => sfx.levelup.pause(), 200);
-            } else {
-                sfx.levelup.pause();
-            }
+        if (sfx.levelup) {
+            try { sfx.levelup.pause(); sfx.levelup.currentTime = 0; } catch(e) {}
         }
         loadLevelScript(currentLevelNumber + 1); 
     }, 5000); 
@@ -223,8 +218,7 @@ export function update(dt, showRetryButtonCallback, currentLevelNumber, loadLeve
             timerPowerUp.timeLeft = 0;
             timerPowerUp.active = false;
             if (sfx.timer && !sfx.timer.paused) {
-                sfx.timer.pause();
-                sfx.timer.currentTime = 0;
+                try { sfx.timer.pause(); sfx.timer.currentTime = 0; } catch(e) {}
             }
         }
     }
@@ -450,10 +444,10 @@ export function update(dt, showRetryButtonCallback, currentLevelNumber, loadLeve
                 timerPowerUp.active = true;
                 timerPowerUp.timeLeft = 10;
                 if (sfx.timer) {
-                    sfx.timer.currentTime = 0;
+                    try { sfx.timer.currentTime = 0; } catch(e) {}
                     safePlayAudio(sfx.timer);
                 } else {
-                    playSound('bonus'); // fallback se audio non ancora caricato
+                    playSound('bonus');
                 }
             }
         } 
@@ -465,8 +459,7 @@ export function update(dt, showRetryButtonCallback, currentLevelNumber, loadLeve
                 triggers.forEach(door => {
                     if (door.type === 'door' && door.group === trig.group && !door.open) {
                         door.open = true;
-                        // FIX iOS: Controlla che sia in pausa prima di suonare
-                        if (sfx.doorOpen.paused) {
+                        if (sfx.doorOpen && sfx.doorOpen.paused) {
                             safePlayAudio(sfx.doorOpen);
                         }
                     }
@@ -476,8 +469,7 @@ export function update(dt, showRetryButtonCallback, currentLevelNumber, loadLeve
                 triggers.forEach(door => {
                     if (door.type === 'door' && door.group === trig.group && door.open) {
                         door.open = false;
-                        // FIX iOS: Controlla che sia in pausa prima di suonare
-                        if (sfx.doorClose.paused) {
+                        if (sfx.doorClose && sfx.doorClose.paused) {
                             safePlayAudio(sfx.doorClose);
                         }
                     }
