@@ -185,15 +185,26 @@ function drawPlayer() {
         ctx.drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh);
     }
     
-    // EFFETTO ROSSO SE IN LAVA
+
+
+
+// EFFETTO ROSSO SE IN LAVA (Ruotato: Terzo VERTICALE centrale)
     if (player.isInLava && !player.isDying) {
         ctx.globalCompositeOperation = 'source-atop';
         const intensity = 0.5 + Math.sin(Date.now() * 0.01) * 0.2; // Pulsazione
         ctx.fillStyle = `rgba(255, 50, 0, ${intensity * 0.6})`;
+        
+        // Calcoliamo un terzo della LARGHEZZA (dw)
+        const unTerzoW = dw / 3;
+        
         if (player.facing === -1) {
-            ctx.fillRect(0, 0, dw, dh);
+            // Guarda a sinistra: trasliamo di 1/3 di larghezza e coloriamo per 1/3
+            // Usiamo tutta l'altezza (dh)
+            ctx.fillRect(unTerzoW, 0, unTerzoW, dh);
         } else {
-            ctx.fillRect(dx, dy, dw, dh);
+            // Guarda a destra: aggiungiamo 1/3 alla posizione X (dx)
+            // Usiamo tutta l'altezza (dh)
+            ctx.fillRect(dx + unTerzoW, dy, unTerzoW, dh);
         }
     }
     
