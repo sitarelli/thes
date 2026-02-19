@@ -111,15 +111,31 @@ function checkOrientation() {
     // perché l'orientamento è già forzato dal manifest
     if (isCapacitor()) {
         const rotateMsg = document.getElementById('rotate-message');
-        if (rotateMsg) rotateMsg.style.display = 'none';
+        if (rotateMsg) {
+            rotateMsg.style.display = 'none';
+            rotateMsg.style.pointerEvents = 'none';
+        }
         return;
     }
     
     // SOLO su browser web: mostra overlay se verticale
     const rotateMsg = document.getElementById('rotate-message');
-    if (rotateMsg && window.innerWidth < 900) {
-        if (window.innerHeight > window.innerWidth) rotateMsg.style.display = 'flex';
-        else rotateMsg.style.display = 'none';
+    if (rotateMsg) {
+        if (window.innerWidth < 900 && window.innerHeight > window.innerWidth) {
+            // Portrait su mobile: mostra il messaggio e blocca i touch sotto
+            rotateMsg.style.display = 'flex';
+            rotateMsg.style.pointerEvents = 'auto';
+        } else {
+            // Landscape (o desktop): nascondi e libera completamente i touch
+            rotateMsg.style.display = 'none';
+            rotateMsg.style.pointerEvents = 'none';
+            
+            // Ripristina interattività del tap-to-start dopo la rotazione
+            const tapOverlay = document.getElementById('tap-to-start');
+            if (tapOverlay && tapOverlay.classList.contains('show')) {
+                tapOverlay.style.pointerEvents = 'auto';
+            }
+        }
     }
 }
 
