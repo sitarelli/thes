@@ -386,18 +386,18 @@ export function update(dt, showRetryButtonCallback, currentLevelNumber, loadLeve
         }
     });
 
-    // === LAVA: DANNO CONTINUO ===
+ 
+// === LAVA: DANNO CONTINUO ===
     const LAVA_DAMAGE_PER_SECOND = 0.5;
-    let touchingLava = false; // Flag per tracciare contatto con lava
+    let touchingLava = false; 
     
     lavas.forEach(l => {
         if (rectIntersect(player, l, true)) {
-            touchingLava = true; // Player sta toccando la lava
+            touchingLava = true; 
             gameState.power -= LAVA_DAMAGE_PER_SECOND * dt;
             if (sfx.lava.paused) safePlayAudio(sfx.lava);
             
-            // PARTICELLE ROSSE ogni tanto
-            if (Math.random() < 0.1) { // 10% probabilità per frame
+            if (Math.random() < 0.1) {
                 const playerCenterX = player.x + player.w / 2;
                 const playerCenterY = player.y + player.h / 2;
                 createColorParticles(playerCenterX, playerCenterY, 5, 'hit');
@@ -409,8 +409,16 @@ export function update(dt, showRetryButtonCallback, currentLevelNumber, loadLeve
             }
         }
     });
-    
-    player.isInLava = touchingLava; // Aggiorna lo stato
+
+    // FIX: Se non tocca la lava e il suono sta andando, lo ferma
+    if (!touchingLava && !sfx.lava.paused) {
+        sfx.lava.pause();
+        sfx.lava.currentTime = 0;
+    }
+
+    player.isInLava = touchingLava;
+
+
 
     // === OGGETTI ===
     items.forEach(item => { 
