@@ -142,7 +142,9 @@ function checkOrientation() {
 function initOrientation() {
     window.addEventListener('load', checkOrientation);
     window.addEventListener('resize', checkOrientation);
-    window.addEventListener('orientationchange', checkOrientation);
+    // DELAY obbligatorio: orientationchange scatta PRIMA che innerWidth/Height si aggiornino
+    // Senza il timeout, checkOrientation vede ancora le dimensioni del portrait e blocca il tap
+    window.addEventListener('orientationchange', () => setTimeout(checkOrientation, 350));
 
     if (isIOS()) {
         window.addEventListener('load', () => setTimeout(() => window.scrollTo(0, 1), 100));
