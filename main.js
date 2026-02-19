@@ -548,9 +548,12 @@ async function startGame() {
     if (gameStarted) return;
     gameStarted = true;
 
-    // 1. Crea AudioContext subito dopo il gesto
+    // 1. Crea e RESUME AudioContext in modo SINCRONO prima di qualsiasi await.
+    //    La policy audio del browser richiede che la creazione/resume avvenga
+    //    nella stessa chiamata sincrona del gesto utente (touchend/click).
     const actx = getOrCreateAudioContext();
-    if (actx.state === 'suspended') await actx.resume().catch(() => {});
+    // Resume sincrono (non await): non blocchiamo il thread, ma il gesto è già "registrato"
+    if (actx.state === 'suspended') actx.resume().catch(() => {});
 
     // 2. Mostra feedback visivo mentre carichiamo i suoni
     showLoadingScreen('Caricamento audio...');
@@ -660,15 +663,51 @@ document.addEventListener('visibilitychange', async () => {
     }
 });
 
+// Esegui checkOrientation subito al load per evitare che rotate-message blocchi i touch
+(function checkOrientationOnLoad() {
+    const rotateMsg = document.getElementById('rotate-message');
+    if (!rotateMsg) return;
+    const isCapacitorEnv = !!(window.Capacitor || window.webkit?.messageHandlers?.capacitor);
+    if (isCapacitorEnv) {
+        rotateMsg.style.display = 'none';
+        rotateMsg.style.pointerEvents = 'none';
+        return;
+    }
+    if (window.innerWidth < 900 && window.innerHeight > window.innerWidth) {
+        rotateMsg.style.display = 'flex';
+        rotateMsg.style.pointerEvents = 'auto';
+    } else {
+        rotateMsg.style.display = 'none';
+        rotateMsg.style.pointerEvents = 'none';
+    }
+})();
+window.addEventListener('resize', () => {
+    const rotateMsg = document.getElementById('rotate-message');
+    if (!rotateMsg) return;
+    const isCapacitorEnv = !!(window.Capacitor || window.webkit?.messageHandlers?.capacitor);
+    if (isCapacitorEnv) { rotateMsg.style.display = 'none'; rotateMsg.style.pointerEvents = 'none'; return; }
+    if (window.innerWidth < 900 && window.innerHeight > window.innerWidth) {
+        rotateMsg.style.display = 'flex';
+        rotateMsg.style.pointerEvents = 'auto';
+        if (tapOverlay) tapOverlay.style.pointerEvents = 'none';
+    } else {
+        rotateMsg.style.display = 'none';
+        rotateMsg.style.pointerEvents = 'none';
+        if (tapOverlay && tapOverlay.classList.contains('show')) tapOverlay.style.pointerEvents = 'auto';
+    }
+});
+
 if (tapOverlay) {
     tapOverlay.classList.add('show');
 
-    tapOverlay.addEventListener('touchstart', function(e) {
+    // touchend è più affidabile di touchstart per sbloccare AudioContext su Android/iOS:
+    // garantisce che il gesto sia completo prima di avviare operazioni async.
+    tapOverlay.addEventListener('touchend', function(e) {
         e.preventDefault();
-        e.stopPropagation();
         startGame();
     }, { passive: false });
 
+    // click gestisce desktop e il fallback automatico touch->click sui browser moderni
     tapOverlay.addEventListener('click', function(e) {
         e.preventDefault();
         startGame();
