@@ -140,6 +140,38 @@ export function updateColorParticles(deltaMultiplier = 1) {
     });
 }
 
+
+
+// ===== FUOCHI D'ARTIFICIO (CUORI E STELLE) =====
+export function createVictoryBurst(x, y) {
+    const count = 5; // Quante particelle escono ad ogni frame
+    for (let i = 0; i < count; i++) {
+        fireworkParticles.push({
+            x: x + (Math.random() - 0.5) * 40,
+            y: y + (Math.random() - 0.5) * 40,
+            vx: (Math.random() - 0.5) * 10,
+            vy: (Math.random() - 0.5) * 10 - 5, // Spinta verso l'alto
+            life: 1.0,
+            size: Math.random() * 10 + 10,
+            type: Math.random() > 0.5 ? 'heart' : 'star'
+        });
+    }
+}
+
+export function updateFireworkParticles() {
+    const filtered = fireworkParticles.filter(p => p.life > 0);
+    fireworkParticles.length = 0;
+    fireworkParticles.push(...filtered);
+
+    fireworkParticles.forEach(p => {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.15; // Gravità che li fa ricadere giù
+        p.life -= 0.01; // Svaniscono gradualmente
+    });
+}
+
+
 // ===== CAMERA SHAKE =====
 export function addCameraShake(intensity) {
     cameraShake.intensity = intensity;
@@ -187,9 +219,27 @@ export function winLevel(d, currentLevelNumber, loadLevelScript) {
 }
 
 export function update(dt, showRetryButtonCallback, currentLevelNumber, loadLevelScript) {
-    if (gameState.gameOver || gameState.won) {
-        sfx.walk && sfx.walk.pause();
-        sfx.fly && sfx.fly.pause();
+   // === GESTIONE VITTORIA E FUOCHI D'ARTIFICIO ===
+    if (gameState.won) {
+        if (sfx.walk) sfx.walk.pause();
+        if (sfx.fly) sfx.fly.pause();
+        
+        // Continua a "sparare" fuochi dal centro dei personaggi
+        if (Math.random() < 0.15) { 
+            const centerX = gameState.vX + gameState.vW / 2;
+            const centerY = gameState.vY + gameState.vH / 2;
+            createVictoryBurst(centerX, centerY);
+        }
+        
+        // Aggiorna la posizione dei fuochi
+        updateFireworkParticles();
+        return; 
+    }
+
+    // === GESTIONE GAME OVER NORMALE ===
+    if (gameState.gameOver) {
+        if (sfx.walk) sfx.walk.pause();
+        if (sfx.fly) sfx.fly.pause();
         return;
     }
 
