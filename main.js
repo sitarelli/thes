@@ -69,7 +69,8 @@ const audioDefinitions = {
     keyPickup:  { src: 'audio/key.ogg',         volume: 0.6 },
     death:      { src: 'audio/death.ogg',       volume: 0.7 },
     contact:    { src: 'audio/contact.ogg',     volume: 0.6 },
-    lava:       { src: 'audio/lava.ogg',        volume: 0.5, loop: true }
+    lava:       { src: 'audio/lava.ogg',        volume: 0.5 },
+    timer:      { src: 'audio/timer.ogg',       volume: 0.8, loop: true }
 };
 
 export const sfx = {};
@@ -311,11 +312,16 @@ function initGame(levelData) {
     
     safePlayAudio(sfx.beginLevel);
     gameState.hasKey = false; 
+    gameState.hasFlag = false;
     gameState.doorOpen = false; 
     gameState.won = false;
     gameState.victoryTime = 0;
     gameState.power = gameState.maxPower;
     gameState.gameOver = false;
+    // Reset power-up timer
+    timerPowerUp.active = false;
+    timerPowerUp.timeLeft = 0;
+    if (sfx.timer && !sfx.timer.paused) { try { sfx.timer.pause(); sfx.timer.currentTime = 0; } catch(e) {} }
     
     // Cambia colore sfondo mattoni ad ogni livello
     randomizeBrickColor();
@@ -524,6 +530,7 @@ function restartGame() {
     gameState.gameOver = false;
     gameState.power = gameState.maxPower; 
     gameState.hasKey = false;
+    gameState.hasFlag = false;
     
     loadLevelScript(currentLevelNumber); 
 }
@@ -548,12 +555,9 @@ async function startGame() {
     if (gameStarted) return;
     gameStarted = true;
 
-    // 1. Crea e RESUME AudioContext in modo SINCRONO prima di qualsiasi await.
-    //    La policy audio del browser richiede che la creazione/resume avvenga
-    //    nella stessa chiamata sincrona del gesto utente (touchend/click).
+    // 1. Crea AudioContext subito dopo il gesto
     const actx = getOrCreateAudioContext();
-    // Resume sincrono (non await): non blocchiamo il thread, ma il gesto è già "registrato"
-    if (actx.state === 'suspended') actx.resume().catch(() => {});
+    if (actx.state === 'suspended') await actx.resume().catch(() => {});
 
     // 2. Mostra feedback visivo mentre carichiamo i suoni
     showLoadingScreen('Caricamento audio...');
@@ -663,72 +667,57 @@ document.addEventListener('visibilitychange', async () => {
     }
 });
 
-// Esegui checkOrientation subito al load per evitare che rotate-message blocchi i touch
-(function checkOrientationOnLoad() {
-    const rotateMsg = document.getElementById('rotate-message');
-    if (!rotateMsg) return;
-    const isCapacitorEnv = !!(window.Capacitor || window.webkit?.messageHandlers?.capacitor);
-    if (isCapacitorEnv) {
-        rotateMsg.style.display = 'none';
-        rotateMsg.style.pointerEvents = 'none';
-        return;
-    }
-    if (window.innerWidth < 900 && window.innerHeight > window.innerWidth) {
-        rotateMsg.style.display = 'flex';
-        rotateMsg.style.pointerEvents = 'auto';
-    } else {
-        rotateMsg.style.display = 'none';
-        rotateMsg.style.pointerEvents = 'none';
-    }
-})();
-window.addEventListener('resize', () => {
-    const rotateMsg = document.getElementById('rotate-message');
-    if (!rotateMsg) return;
-    const isCapacitorEnv = !!(window.Capacitor || window.webkit?.messageHandlers?.capacitor);
-    if (isCapacitorEnv) { rotateMsg.style.display = 'none'; rotateMsg.style.pointerEvents = 'none'; return; }
-    if (window.innerWidth < 900 && window.innerHeight > window.innerWidth) {
-        rotateMsg.style.display = 'flex';
-        rotateMsg.style.pointerEvents = 'auto';
-        if (tapOverlay) tapOverlay.style.pointerEvents = 'none';
-    } else {
-        rotateMsg.style.display = 'none';
-        rotateMsg.style.pointerEvents = 'none';
-        if (tapOverlay && tapOverlay.classList.contains('show')) tapOverlay.style.pointerEvents = 'auto';
-    }
-});
-
 if (tapOverlay) {
     tapOverlay.classList.add('show');
 
-    // touchend è più affidabile di touchstart per sbloccare AudioContext su Android/iOS:
-    // garantisce che il gesto sia completo prima di avviare operazioni async.
-    tapOverlay.addEventListener('touchend', function(e) {
+    tapOverlay.addEventListener('touchstart', function(e) {
         e.preventDefault();
+        e.stopPropagation();
         startGame();
     }, { passive: false });
 
-    // click gestisce desktop e il fallback automatico touch->click sui browser moderni
     tapOverlay.addEventListener('click', function(e) {
         e.preventDefault();
         startGame();
     });
 }
 
-// Export richiesto da player.js per oggetto timer
-export function timerPowerUp() {
-    gameState.power = Math.min(gameState.maxPower, gameState.power + (gameState.maxPower * 0.25));
-}
+// Stato power-up timer Pac-Man: blocca nemici per 10 secondi
+export const timerPowerUp = {
+    active: false,
+    timeLeft: 0
+};
 
-// Aggiorna icona chiave nell'HUD (chiamata ogni frame da updateHUD in renderer.js
-// oppure direttamente qui nel loop se renderer non la gestisce)
+// Aggiorna icone chiave e bandiera nell'HUD (chiamata ogni frame dal loop)
 export function updateKeyHUD() {
+    // === ICONA CHIAVE ===
     const keyIndicator = document.querySelector('.key-indicator');
-    if (!keyIndicator) return;
-    if (gameState.hasKey) {
-        keyIndicator.textContent = '🔑';
-        keyIndicator.classList.add('has-key');
-    } else {
-        keyIndicator.textContent = '◯';
-        keyIndicator.classList.remove('has-key');
+    if (keyIndicator) {
+        if (gameState.hasKey) {
+            keyIndicator.classList.add('has-key');
+            // Usa img se disponibile, altrimenti emoji
+            if (!keyIndicator.querySelector('img')) {
+                keyIndicator.innerHTML = '<img src="png/key.png" style="width:24px;height:24px;image-rendering:pixelated;vertical-align:middle;">';
+            }
+        } else {
+            keyIndicator.classList.remove('has-key');
+            if (!keyIndicator.querySelector('img')) {
+                keyIndicator.textContent = '◯';
+            } else {
+                keyIndicator.innerHTML = '<img src="png/key.png" style="width:24px;height:24px;image-rendering:pixelated;vertical-align:middle;opacity:0.25;filter:grayscale(1);">';
+            }
+        }
+    }
+
+    // === ICONA BANDIERA ===
+    const flagIndicator = document.querySelector('.flag-indicator');
+    if (flagIndicator) {
+        if (gameState.hasFlag) {
+            flagIndicator.classList.add('has-flag');
+            flagIndicator.innerHTML = '<img src="png/flag.png" style="width:24px;height:24px;image-rendering:pixelated;vertical-align:middle;">';
+        } else {
+            flagIndicator.classList.remove('has-flag');
+            flagIndicator.innerHTML = '<img src="png/flag.png" style="width:24px;height:24px;image-rendering:pixelated;vertical-align:middle;opacity:0.25;filter:grayscale(1);">';
+        }
     }
 }

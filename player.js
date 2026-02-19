@@ -52,6 +52,7 @@ export function playerDie() {
     player.isDying = true;
     player.deathFrame = 0;
     player.frameTimer = 0;
+    player._lavaWasPlaying = false;  // reset so lava sound can replay next life
     
     stopAllSounds(); 
     safePlayAudio(sfx.death); 
@@ -165,27 +166,21 @@ export function winLevel(d, currentLevelNumber, loadLevelScript) {
     gameState.vW = d.w; 
     gameState.vH = d.h;
     
-    sfx.walk.pause(); 
-    sfx.fly.pause();
+    if (sfx.walk) sfx.walk.pause(); 
+    if (sfx.fly) sfx.fly.pause();
+    if (sfx.lava) sfx.lava.pause();
     
-    // FIX iOS: Assicurati che levelup sia completamente fermo prima di suonare
-    sfx.levelup.pause();
-    sfx.levelup.currentTime = 0;
+    if (sfx.levelup) {
+        try { sfx.levelup.pause(); sfx.levelup.currentTime = 0; } catch(e) {}
+    }
     
-    // Piccolo delay per iOS
     setTimeout(() => {
         safePlayAudio(sfx.levelup);
     }, 50);
     
     setTimeout(() => {
-        // FIX iOS: Fade out graduale invece di pause brusco
-        if (sfx.levelup && !sfx.levelup.paused) {
-            sfx.levelup.volume = Math.max(0, sfx.levelup.volume - 0.1);
-            if (sfx.levelup.volume > 0.1) {
-                setTimeout(() => sfx.levelup.pause(), 200);
-            } else {
-                sfx.levelup.pause();
-            }
+        if (sfx.levelup) {
+            try { sfx.levelup.pause(); sfx.levelup.currentTime = 0; } catch(e) {}
         }
         loadLevelScript(currentLevelNumber + 1); 
     }, 5000); 
@@ -193,8 +188,8 @@ export function winLevel(d, currentLevelNumber, loadLevelScript) {
 
 export function update(dt, showRetryButtonCallback, currentLevelNumber, loadLevelScript) {
     if (gameState.gameOver || gameState.won) {
-        sfx.walk.pause();
-        sfx.fly.pause();
+        sfx.walk && sfx.walk.pause();
+        sfx.fly && sfx.fly.pause();
         return;
     }
 
@@ -224,8 +219,7 @@ export function update(dt, showRetryButtonCallback, currentLevelNumber, loadLeve
             timerPowerUp.timeLeft = 0;
             timerPowerUp.active = false;
             if (sfx.timer && !sfx.timer.paused) {
-                sfx.timer.pause();
-                sfx.timer.currentTime = 0;
+                try { sfx.timer.pause(); sfx.timer.currentTime = 0; } catch(e) {}
             }
         }
     }
@@ -325,16 +319,16 @@ export function update(dt, showRetryButtonCallback, currentLevelNumber, loadLeve
 
     // SUONI MOVIMENTO
     if (player.animState === 2 || player.animState === 3) {
-        if (sfx.fly.paused) safePlayAudio(sfx.fly);
-        sfx.walk.pause(); 
+        if (sfx.fly && sfx.fly.paused) safePlayAudio(sfx.fly);
+        if (sfx.walk) sfx.walk.pause(); 
     } 
     else if (player.animState === 1) {
-        if (sfx.walk.paused) safePlayAudio(sfx.walk);
-        sfx.fly.pause();
+        if (sfx.walk && sfx.walk.paused) safePlayAudio(sfx.walk);
+        if (sfx.fly) sfx.fly.pause();
     } 
     else {
-        sfx.walk.pause();
-        sfx.fly.pause();
+        if (sfx.walk) sfx.walk.pause();
+        if (sfx.fly) sfx.fly.pause();
     }
 
     player.frameTimer++;
@@ -386,17 +380,16 @@ export function update(dt, showRetryButtonCallback, currentLevelNumber, loadLeve
         }
     });
 
- 
-// === LAVA: DANNO CONTINUO ===
+    // === LAVA: DANNO CONTINUO ===
     const LAVA_DAMAGE_PER_SECOND = 0.5;
-    let touchingLava = false; 
+    let touchingLava = false;
     
     lavas.forEach(l => {
-        if (rectIntersect(player, l, true)) {
-            touchingLava = true; 
+        if (rectIntersect(player, l, false)) {  // false = bounding box permissiva (anche contatto parziale)
+            touchingLava = true;
             gameState.power -= LAVA_DAMAGE_PER_SECOND * dt;
-            if (sfx.lava.paused) safePlayAudio(sfx.lava);
             
+            // PARTICELLE ROSSE ogni tanto
             if (Math.random() < 0.1) {
                 const playerCenterX = player.x + player.w / 2;
                 const playerCenterY = player.y + player.h / 2;
@@ -409,16 +402,21 @@ export function update(dt, showRetryButtonCallback, currentLevelNumber, loadLeve
             }
         }
     });
-
-    // FIX: Se non tocca la lava e il suono sta andando, lo ferma
-    if (!touchingLava && !sfx.lava.paused) {
-        sfx.lava.pause();
-        sfx.lava.currentTime = 0;
-    }
-
+    
     player.isInLava = touchingLava;
 
-
+    // Suono lava: one-shot al contatto, si risuona solo se esce e rientra
+    if (touchingLava) {
+        if (sfx.lava && !player._lavaWasPlaying) {
+            try { sfx.lava.currentTime = 0; sfx.lava.play().catch(() => {}); } catch(e) {}
+            player._lavaWasPlaying = true;
+        }
+    } else {
+        if (sfx.lava && player._lavaWasPlaying) {
+            try { sfx.lava.pause(); sfx.lava.currentTime = 0; } catch(e) {}
+            player._lavaWasPlaying = false;
+        }
+    }
 
     // === OGGETTI ===
     items.forEach(item => { 
@@ -446,6 +444,7 @@ export function update(dt, showRetryButtonCallback, currentLevelNumber, loadLeve
             }
             else if (item.type === 'flag') { 
                 gameState.flags++; 
+                gameState.hasFlag = true;
                 playSound('bonus'); 
             }
             else if (item.type === 'timer') { 
@@ -454,10 +453,10 @@ export function update(dt, showRetryButtonCallback, currentLevelNumber, loadLeve
                 timerPowerUp.active = true;
                 timerPowerUp.timeLeft = 10;
                 if (sfx.timer) {
-                    sfx.timer.currentTime = 0;
+                    try { sfx.timer.currentTime = 0; } catch(e) {}
                     safePlayAudio(sfx.timer);
                 } else {
-                    playSound('bonus'); // fallback se audio non caricato
+                    playSound('bonus');
                 }
             }
         } 
@@ -469,8 +468,7 @@ export function update(dt, showRetryButtonCallback, currentLevelNumber, loadLeve
                 triggers.forEach(door => {
                     if (door.type === 'door' && door.group === trig.group && !door.open) {
                         door.open = true;
-                        // FIX iOS: Controlla che sia in pausa prima di suonare
-                        if (sfx.doorOpen.paused) {
+                        if (sfx.doorOpen && sfx.doorOpen.paused) {
                             safePlayAudio(sfx.doorOpen);
                         }
                     }
@@ -480,8 +478,7 @@ export function update(dt, showRetryButtonCallback, currentLevelNumber, loadLeve
                 triggers.forEach(door => {
                     if (door.type === 'door' && door.group === trig.group && door.open) {
                         door.open = false;
-                        // FIX iOS: Controlla che sia in pausa prima di suonare
-                        if (sfx.doorClose.paused) {
+                        if (sfx.doorClose && sfx.doorClose.paused) {
                             safePlayAudio(sfx.doorClose);
                         }
                     }
