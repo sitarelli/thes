@@ -594,19 +594,24 @@ export function draw(gameRunning) {
         }
     }
 
-    // Game Over overlay
+
+// Game Over overlay
     if (gameState.gameOver) { 
         ctx.fillStyle = 'rgba(50, 0, 0, 0.85)'; 
-        ctx.fillRect(0, 0, canvas.width, canvas.height); 
+        // Cambiato canvas.width/height per evitare che l'overlay sia gigante
+        ctx.fillRect(0, 0, config.viewportWidth, config.viewportHeight); 
+        
         ctx.fillStyle = '#fff'; 
         ctx.font = 'bold 60px Orbitron, sans-serif';
         ctx.textAlign = 'center';
         ctx.shadowBlur = 20;
         ctx.shadowColor = '#ff0000';
-        ctx.fillText("GAME OVER", canvas.width / 2, canvas.height / 2 - 20); 
-        ctx.shadowBlur = 0; 
+        
+        // FIX: Centrato usando le dimensioni logiche della viewport, non i pixel del canvas!
+        ctx.fillText("GAME OVER", config.viewportWidth / 2, config.viewportHeight / 2 - 20); 
+        ctx.shadowBlur = 0;
     }
-    
+
     // Vittoria
     if (gameState.won) { 
         gameState.victoryTime++;
