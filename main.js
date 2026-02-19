@@ -19,13 +19,20 @@ console.log('🎮 Setup Canvas:', {
 });
 
 
+let dpr = window.devicePixelRatio || 1;
+if (isMobile) {
+    // Se è uno smartphone, forziamo il tetto massimo a 1.5
+    // (L'occhio umano non noterà differenze, ma la scheda video ringrazierà)
+    dpr = Math.min(dpr, 1.5); 
+}
 
-const dpr = window.devicePixelRatio || 2;
 canvas.width = config.viewportWidth * dpr;
 canvas.height = config.viewportHeight * dpr;
 canvas.style.width = `${config.viewportWidth}px`;
 canvas.style.height = `${config.viewportHeight}px`;
 ctx.scale(dpr, dpr);
+
+
 ctx.imageSmoothingEnabled = true;
 
 // --- SPRITES ---

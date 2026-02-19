@@ -17,6 +17,17 @@ export function initRenderer(canvasElement, contextElement, spritesData) {
     canvas = canvasElement;
     ctx = contextElement;
     sprites = spritesData;
+
+    // TRUCCO ANTI-LAG PER MOBILE: Intercettiamo i shadowBlur e li azzeriamo
+    if (isMobile) {
+        const originalSetter = Object.getOwnPropertyDescriptor(CanvasRenderingContext2D.prototype, 'shadowBlur').set;
+        Object.defineProperty(ctx, 'shadowBlur', {
+            set: function(val) {
+                originalSetter.call(this, 0); // Forza le ombre sempre a 0 su smartphone
+            }
+        });
+    }
+
     generateBrickPattern(); // Genera il pattern di mattoni (UNA VOLTA SOLA)
 }
 
