@@ -2,20 +2,28 @@
 /* CONFIGURAZIONE E COSTANTI GLOBALI                                          */
 /* -------------------------------------------------------------------------- */
 
-// Rilevazione mobile migliorata (controlla user agent E dimensioni schermo E touch support)
+// Rilevazione mobile migliorata (controlla user agent E touch support E dimensioni)
 function detectMobile() {
     const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
     const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    const isSmallScreen = window.innerWidth <= 1024; // tablet/mobile
     
+    // Usa screen.width/height (dimensioni fisiche del display in CSS px)
+    // Su Samsung S23: screen.width=360 o screen.height=780 indipendente dall'orientamento
+    // Evita window.innerWidth che cambia con l'orientamento e può superare 1024 in landscape
+    const screenShortSide = Math.min(screen.width, screen.height);
+    const isSmallScreen = screenShortSide <= 500;
+    
+    // Mobile se: (UA mobile O touch disponibile) E schermo fisicamente piccolo
     const result = (isMobileUA || hasTouch) && isSmallScreen;
-    console.log('🔍 Rilevazione Mobile:', {
+    
+    console.log('📱 Rilevazione Mobile:', {
         hasTouch,
         isMobileUA,
         isSmallScreen,
-        screenWidth: window.innerWidth,
+        screenShortSide,
+        windowInnerWidth: window.innerWidth,
         isMobile: result,
-        viewport: result ? '960x540 (16:9)' : '740x510 (4:3)',
+        viewport: result ? '1490x540 (16:9)' : '1000x580 (4:3)',
         zoomApplicato: result ? 1.5 : 1
     });
     return result;
