@@ -670,11 +670,9 @@ document.addEventListener('visibilitychange', async () => {
 if (tapOverlay) {
     tapOverlay.classList.add('show');
 
-    tapOverlay.addEventListener('touchstart', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
+    tapOverlay.addEventListener('touchend', function(e) {
         startGame();
-    }, { passive: false });
+    }, { passive: true });
 
     tapOverlay.addEventListener('click', function(e) {
         e.preventDefault();
