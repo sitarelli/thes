@@ -38,24 +38,22 @@ ctx.scale(dpr, dpr);
 ctx.imageSmoothingEnabled = true;
 
 // --- SAMSUNG INTERNET PERFORMANCE FIX ---
-// Samsung Internet ha una gestione pessima di backdrop-filter e canvas shadows
 const isSamsungInternet = /SamsungBrowser/i.test(navigator.userAgent);
 if (isSamsungInternet) {
-    // Inietta CSS che disabilita backdrop-filter su tutti gli elementi
     const perf = document.createElement('style');
     perf.textContent = `
         * { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
-        .compact-header { background: rgba(10,10,30,0.95) !important; }
-        .power-container { background: rgba(10,10,30,0.98) !important; }
-        #joystick-base { background: rgba(10,20,50,0.85) !important; }
-        #btn-fly { background: radial-gradient(circle, rgba(0,255,65,0.4), rgba(0,255,65,0.2)) !important; }
-        .tap-content { background: rgba(10,20,40,0.9) !important; }
+        .compact-header { background: rgba(10,10,30,0.97) !important; }
+        .power-container { background: rgba(10,10,30,0.99) !important; }
+        #joystick-base { background: rgba(10,20,50,0.9) !important; }
+        #btn-fly { background: radial-gradient(circle, rgba(0,255,65,0.5), rgba(0,255,65,0.25)) !important; }
+        .tap-content { background: rgba(10,20,40,0.95) !important; }
     `;
     document.head.appendChild(perf);
-    console.log('⚡ Samsung Internet rilevato: ottimizzazioni performance attive');
+    console.log('⚡ Samsung Internet: ottimizzazioni performance attive');
 }
 
-
+// --- SPRITES ---
 const sprites = {};
 let loadedImages = 0;
 const imagesToLoad = [
@@ -433,15 +431,9 @@ function update(dt) {
     if (gameState.gameOver || gameState.won) {
         sfx.walk.pause();
         sfx.fly.pause();
-        return;
-    }
-
-
-
-
-if (gameState.gameOver || gameState.won) {
-        sfx.walk.pause();
-        sfx.fly.pause();
+        sfx.lava.pause();
+        sfx.lava.currentTime = 0;
+        player._lavaWasPlaying = false;
         return;
     }
 
@@ -618,17 +610,19 @@ if (gameState.gameOver || gameState.won) {
     });
 
     // Suono lava: one-shot al contatto, si risuona solo se il player esce e rientra
-    if (touchingLava) {
-        if (!player._lavaWasPlaying) {
-            sfx.lava.currentTime = 0;
-            sfx.lava.play().catch(() => {});
-            player._lavaWasPlaying = true;
-        }
-    } else {
-        if (player._lavaWasPlaying) {
-            sfx.lava.pause();
-            sfx.lava.currentTime = 0;
-            player._lavaWasPlaying = false;
+    if (!player.isDying && !gameState.gameOver) {
+        if (touchingLava) {
+            if (!player._lavaWasPlaying) {
+                sfx.lava.currentTime = 0;
+                sfx.lava.play().catch(() => {});
+                player._lavaWasPlaying = true;
+            }
+        } else {
+            if (player._lavaWasPlaying) {
+                sfx.lava.pause();
+                sfx.lava.currentTime = 0;
+                player._lavaWasPlaying = false;
+            }
         }
     }
 
@@ -761,7 +755,7 @@ function drawLavaEffects(l) {
 }
 
 function drawLavaParticles() {
-    if (isSamsungInternet) return; // Skip on Samsung - troppo lento
+    if (isSamsungInternet) return; // Troppo lento su Samsung Browser
     lavaParticles.forEach(p => {
         const px = p.x * config.zoom - camera.x;
         const py = p.y * config.zoom - camera.y;
@@ -972,34 +966,12 @@ enemies.forEach(en => {
 // Da mettere nella funzione di disegno del player
 
 
-    if (gameState.gameOver) { 
-        ctx.save();
-        // Usa coordinate fisiche raw (identità) così canvas.width/2 è sempre il centro visivo
-        ctx.setTransform(1, 0, 0, 1, 0, 0);
-        const cx = canvas.width / 2;
-        const cy = canvas.height / 2;
-        // Sfondo scuro pieno
-        ctx.fillStyle = 'rgba(50, 0, 0, 0.88)';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        // Riquadro centrato (scala con dpr)
-        const bw = 420 * dpr, bh = 110 * dpr;
-        ctx.fillStyle = 'rgba(0,0,0,0.6)';
-        ctx.strokeStyle = '#ff0000';
-        ctx.lineWidth = 3 * dpr;
-        ctx.beginPath();
-        ctx.roundRect(cx - bw/2, cy - bh/2, bw, bh, 12 * dpr);
-        ctx.fill();
-        ctx.stroke();
-        // Testo
-        ctx.fillStyle = '#ffffff';
-        ctx.font = `bold ${60 * dpr}px Orbitron, sans-serif`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.shadowBlur = 20 * dpr;
-        ctx.shadowColor = '#ff0000';
-        ctx.fillText('GAME OVER', cx, cy);
-        ctx.shadowBlur = 0;
-        ctx.restore();
+    if (gameState.gameOver) {
+        // Mostra overlay HTML (sempre centrato, indipendente da DPR/zoom canvas)
+        const overlay = document.getElementById('game-over-overlay');
+        if (overlay && !overlay.classList.contains('show')) {
+            overlay.classList.add('show');
+        }
     }
     
     if (gameState.won) { 
@@ -1037,17 +1009,13 @@ function updateHUD() {
         else keyIndicator.classList.remove('has-key');
     }
 
-    // === ICONA CAGNOLINO (flag) ===
+    // === ICONA FLAG (cane) ===
     const flagIndicator = document.querySelector('.flag-indicator');
     if (flagIndicator) {
         if (gameState.hasFlag) {
             flagIndicator.classList.add('has-flag');
-            flagIndicator.style.opacity = '1';
-            flagIndicator.style.filter = 'none';
         } else {
             flagIndicator.classList.remove('has-flag');
-            flagIndicator.style.opacity = '0.28';
-            flagIndicator.style.filter = 'grayscale(1)';
         }
     }
 }
@@ -1081,39 +1049,27 @@ function loop(timestamp) {
 }
 
 function showRetryButton() {
-    const oldBtn = document.getElementById('retry-btn');
-    if (oldBtn) oldBtn.remove();
-    const btn = document.createElement('button');
-    btn.id = 'retry-btn';
-    btn.textContent = 'RIPROVA';
-    Object.assign(btn.style, {
-        position: 'absolute', left: '50%', top: '65%',
-        transform: 'translate(-50%, -50%)', padding: '15px 30px',
-        fontSize: '24px', fontFamily: 'Orbitron, sans-serif',
-        cursor: 'pointer', backgroundColor: '#ff0000', color: 'white',
-        border: 'none', borderRadius: '5px', boxShadow: '0 0 15px rgba(255,0,0,0.5)',
-        zIndex: '100'
-    });
-    btn.onclick = restartGame;
-    document.body.appendChild(btn);
+    // Il pulsante RIPROVA è nel div #game-over-overlay in index.html
+    // L'overlay viene mostrato da draw() quando gameState.gameOver è true
+    // Collega il click solo la prima volta
+    const btn = document.getElementById('retry-btn');
+    if (btn && !btn._wired) {
+        btn.addEventListener('click', restartGame);
+        btn.addEventListener('touchend', function(e) { e.preventDefault(); restartGame(); });
+        btn._wired = true;
+    }
 }
 
 function restartGame() {
-    const btn = document.getElementById('retry-btn');
-    if (btn) btn.remove();
+    // Nascondi overlay game over
+    const overlay = document.getElementById('game-over-overlay');
+    if (overlay) overlay.classList.remove('show');
     
-    // Ripristiniamo lo stato base per riprovare il livello
+    // Ripristina stato per riprovare il livello
     gameState.gameOver = false;
     gameState.power = gameState.maxPower; 
-    gameState.hasKey = false; // Il giocatore deve ritrovare la chiave del livello
-    
-    // NOTA: Se vuoi che le stelle/bulbi raccolti nei livelli precedenti 
-    // rimangano salvati, commenta le righe qui sotto:
-    // gameState.stars = 0;
-    // gameState.flags = 0;
-    // gameState.bulbs = 0;
+    gameState.hasKey = false;
 
-    // --- LA MODIFICA CHIAVE ---
     // Invece di resettare a 1, usiamo il currentLevelNumber attuale
     loadLevelScript(currentLevelNumber); 
 }

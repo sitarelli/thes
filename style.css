@@ -372,6 +372,98 @@ body.game-active * {
     }
 }
 
+/* --- FLAG INDICATOR (cane/bandiera) --- */
+.flag-indicator {
+    font-size: 0;
+    width: 28px;
+    height: 28px;
+    display: inline-block;
+    background-image: url('png/flag.png');
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    opacity: 0.25;
+    filter: grayscale(100%);
+    transform: scale(0.9);
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.flag-indicator.has-flag {
+    opacity: 1;
+    filter: grayscale(0%) drop-shadow(0 0 10px var(--neon-cyan));
+    animation: flagNeonPulse 1.2s infinite alternate;
+}
+
+@keyframes flagNeonPulse {
+    0% {
+        transform: scale(1.0) rotate(-4deg);
+        filter: grayscale(0%) drop-shadow(0 0 5px var(--neon-cyan));
+    }
+    100% {
+        transform: scale(1.15) rotate(4deg);
+        filter: grayscale(0%) drop-shadow(0 0 14px var(--neon-cyan));
+    }
+}
+
+/* ============================================
+   GAME OVER OVERLAY - HTML puro, sempre centrato
+   ============================================ */
+
+#game-over-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(50, 0, 0, 0.88);
+    z-index: 5000;
+    justify-content: center;
+    align-items: center;
+}
+
+#game-over-overlay.show {
+    display: flex;
+}
+
+.game-over-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+    padding: 44px 70px;
+    background: rgba(0, 0, 0, 0.65);
+    border: 3px solid #ff0000;
+    border-radius: 14px;
+    box-shadow: 0 0 50px rgba(255, 0, 0, 0.5), inset 0 0 30px rgba(255, 0, 0, 0.1);
+}
+
+.game-over-text {
+    font-family: 'Orbitron', sans-serif;
+    font-size: clamp(40px, 7vw, 72px);
+    font-weight: 900;
+    color: #ffffff;
+    letter-spacing: 8px;
+    text-shadow: 0 0 20px #ff0000, 0 0 50px #ff0000;
+}
+
+.game-over-btn {
+    padding: 14px 44px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: clamp(16px, 2.5vw, 26px);
+    font-weight: 700;
+    letter-spacing: 4px;
+    color: #ffffff;
+    background: #cc0000;
+    border: 2px solid #ff4444;
+    border-radius: 8px;
+    cursor: pointer;
+    box-shadow: 0 0 20px rgba(255, 0, 0, 0.5);
+    transition: background 0.2s, transform 0.1s;
+}
+
+.game-over-btn:hover { background: #ff2222; transform: scale(1.06); }
+.game-over-btn:active { transform: scale(0.96); }
+
+
+
 /* ============================================
    TOUCH CONTROLS - Glassmorphism Migliorato
    Fix specifico per tablet

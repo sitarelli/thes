@@ -309,8 +309,8 @@ function drawColorParticles() {
 
 export function createLavaParticles(lava) {
     // OTTIMIZZAZIONE MOBILE: Riduce particelle drasticamente su mobile
-    const maxParticles = isMobile ? 100 : 200;
-    const spawnChance = isMobile ? 0.025 : 0.05;
+    const maxParticles = isMobile ? 500 : 800;
+    const spawnChance = isMobile ? 0.050 : 0.10;
     
     if (lavaParticles.length > maxParticles) return;
     
