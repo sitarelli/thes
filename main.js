@@ -20,7 +20,7 @@ console.log('🎮 Setup Canvas:', {
 
 
 
-const dpr = window.devicePixelRatio || 1;
+const dpr = window.devicePixelRatio || 2;
 canvas.width = config.viewportWidth * dpr;
 canvas.height = config.viewportHeight * dpr;
 canvas.style.width = `${config.viewportWidth}px`;
