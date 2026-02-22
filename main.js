@@ -72,11 +72,11 @@ const audioDefinitions = {
     walk:       { src: 'audio/walkingthes.ogg', volume: 0.4, loop: true },
     fly:        { src: 'audio/flyingthes.ogg',  volume: 0.5, loop: true },
     levelup:    { src: 'audio/levelup.ogg',     volume: 0.8 },
-    beginLevel: { src: 'audio/beginlevel.webm',  volume: 0.7 },
+    beginLevel: { src: 'audio/beginlevel.ogg',  volume: 0.7 },
     keyPickup:  { src: 'audio/key.ogg',         volume: 0.6 },
-    death:      { src: 'audio/death.webm',       volume: 0.7 },
-    contact:    { src: 'audio/contact.webm',     volume: 0.6 },
-    lava:       { src: 'audio/lava.webm',        volume: 0.5 },
+    death:      { src: 'audio/death.ogg',       volume: 0.7 },
+    contact:    { src: 'audio/contact.ogg',     volume: 0.6 },
+    lava:       { src: 'audio/lava.ogg',        volume: 0.5 },
     timer:      { src: 'audio/timer.ogg',       volume: 0.5, loop: true },
     flagPickup: { src: 'audio/flag.ogg',         volume: 0.6 }
 };
