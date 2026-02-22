@@ -64,20 +64,22 @@ export function restorePower(amount) {
 }
 
 export function updateLavaParticles(deltaMultiplier = 1) {
-    const filtered = lavaParticles.filter(p => p.life > 0);
-    lavaParticles.length = 0;
-    lavaParticles.push(...filtered);
-    
-    lavaParticles.forEach(p => {
+    // In-place removal: evita allocazioni filter/spread ogni frame
+    let write = 0;
+    const friction = 1 - (1 - 0.98) * deltaMultiplier; // Approx Math.pow(0.98, dm) senza pow
+    for (let i = 0; i < lavaParticles.length; i++) {
+        const p = lavaParticles[i];
         p.x += p.vx * deltaMultiplier;
         p.y += p.vy * deltaMultiplier;
         p.vy -= 0.01 * deltaMultiplier;
         p.life -= 0.015 * deltaMultiplier;
         if (p.type === 'smoke') {
             p.size += 0.1 * deltaMultiplier;
-            p.vx *= Math.pow(0.98, deltaMultiplier);
+            p.vx *= friction;
         }
-    });
+        if (p.life > 0) lavaParticles[write++] = p;
+    }
+    lavaParticles.length = write;
 }
 
 export function createDustParticles() {
@@ -96,18 +98,19 @@ export function createDustParticles() {
 }
 
 export function updateDustParticles(deltaMultiplier = 1) {
-    const filtered = dustParticles.filter(p => p.life > 0);
-    dustParticles.length = 0;
-    dustParticles.push(...filtered);
-    
-    dustParticles.forEach(p => {
+    const friction = 1 - (1 - 0.95) * deltaMultiplier; // Approx Math.pow(0.95, dm) senza pow
+    let write = 0;
+    for (let i = 0; i < dustParticles.length; i++) {
+        const p = dustParticles[i];
         p.x += p.vx * deltaMultiplier;
         p.y += p.vy * deltaMultiplier;
-        p.vy += 0.02 * deltaMultiplier; // Gravità leggera
+        p.vy += 0.02 * deltaMultiplier;
         p.life -= 0.025 * deltaMultiplier;
-        p.size += 0.05 * deltaMultiplier; // Si espande leggermente
-        p.vx *= Math.pow(0.95, deltaMultiplier); // Attrito
-    });
+        p.size += 0.05 * deltaMultiplier;
+        p.vx *= friction;
+        if (p.life > 0) dustParticles[write++] = p;
+    }
+    dustParticles.length = write;
 }
 
 // ===== PARTICELLE COLORATE (da React) =====
@@ -129,16 +132,16 @@ export function createColorParticles(x, y, count, type = 'collect') {
 }
 
 export function updateColorParticles(deltaMultiplier = 1) {
-    const filtered = colorParticles.filter(p => p.life > 0);
-    colorParticles.length = 0;
-    colorParticles.push(...filtered);
-    
-    colorParticles.forEach(p => {
-        p.x += p.vx; // Velocità normale
+    let write = 0;
+    for (let i = 0; i < colorParticles.length; i++) {
+        const p = colorParticles[i];
+        p.x += p.vx;
         p.y += p.vy;
-        p.vy += 0.9; // Gravità
+        p.vy += 0.9;
         p.life -= 0.02;
-    });
+        if (p.life > 0) colorParticles[write++] = p;
+    }
+    colorParticles.length = write;
 }
 
 
@@ -160,16 +163,16 @@ export function createVictoryBurst(x, y) {
 }
 
 export function updateFireworkParticles() {
-    const filtered = fireworkParticles.filter(p => p.life > 0);
-    fireworkParticles.length = 0;
-    fireworkParticles.push(...filtered);
-
-    fireworkParticles.forEach(p => {
+    let write = 0;
+    for (let i = 0; i < fireworkParticles.length; i++) {
+        const p = fireworkParticles[i];
         p.x += p.vx;
         p.y += p.vy;
-        p.vy += 0.15; // Gravità che li fa ricadere giù
-        p.life -= 0.01; // Svaniscono gradualmente
-    });
+        p.vy += 0.15;
+        p.life -= 0.01;
+        if (p.life > 0) fireworkParticles[write++] = p;
+    }
+    fireworkParticles.length = write;
 }
 
 
