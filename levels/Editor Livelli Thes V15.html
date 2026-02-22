@@ -59,8 +59,8 @@
             background-color: #000; 
             position: relative; 
             overflow: hidden;
-            width: 800px; 
-            height: 600px; 
+            width: 1500px; 
+            height: 700px; 
         }
         canvas { display: block; cursor: crosshair; image-rendering: pixelated; }
         
@@ -206,7 +206,7 @@
     </div>
 
     <div id="editor-wrapper">
-        <canvas id="editorCanvas" width="800" height="600"></canvas>
+        <canvas id="editorCanvas" width="1500" height="700"></canvas>
     </div>
 
     <textarea id="outputJson" readonly onclick="this.select()" placeholder="Codice generato qui..."></textarea>
@@ -216,8 +216,8 @@
     const ctx = canvas.getContext('2d');
     
     // DIMENSIONI CANVAS
-    const CANVAS_WIDTH = 800; 
-    const CANVAS_HEIGHT = 600;
+    const CANVAS_WIDTH = 1500; 
+    const CANVAS_HEIGHT = 700;
     
     let CONFIG = { brickSize: 20, cols: 25, rows: 25, virtualWidth: 500, virtualHeight: 500 };
     let viewport = { offsetX: 0, offsetY: 0, isDragging: false, lastX: 0, lastY: 0, zoom: 1 };
