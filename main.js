@@ -65,22 +65,31 @@ imagesToLoad.forEach(imgData => {
     sprites[imgData.name] = img;
 });
 
-// --- DEFINIZIONI AUDIO (solo OGG) ---
-const audioDefinitions = {
-    doorOpen:   { src: 'audio/dooropen.ogg',    volume: 0.6 },
-    doorClose:  { src: 'audio/doorclose.ogg',   volume: 0.6 },
-    walk:       { src: 'audio/walkingthes.ogg', volume: 0.4, loop: true },
-    fly:        { src: 'audio/flyingthes.ogg',  volume: 0.5, loop: true },
-    levelup:    { src: 'audio/levelup.ogg',     volume: 0.8 },
-    beginLevel: { src: 'audio/beginlevel.ogg',  volume: 0.7 },
-    keyPickup:  { src: 'audio/key.ogg',         volume: 0.6 },
-    death:      { src: 'audio/death.ogg',       volume: 0.7 },
-    contact:    { src: 'audio/contact.ogg',     volume: 0.6 },
-    lava:       { src: 'audio/lava.ogg',        volume: 0.5 },
-    timer:      { src: 'audio/timer.ogg',       volume: 0.5, loop: true },
-    flagPickup: { src: 'audio/flag.ogg',         volume: 0.6 }
-};
+// Rileva una volta sola quale formato usare
+const preferMP3 = (() => {
+    const a = document.createElement('audio');
+    return a.canPlayType('audio/mpeg') !== '';
+})();
 
+function aud(name) {
+    return preferMP3 ? `audio/${name}.mp3` : `audio/${name}.ogg`;
+}
+
+// --- DEFINIZIONI AUDIO (MP3 preferito, OGG fallback) ---
+const audioDefinitions = {
+    doorOpen:   { src: aud('dooropen'),    volume: 0.6 },
+    doorClose:  { src: aud('doorclose'),   volume: 0.6 },
+    walk:       { src: aud('walkingthes'), volume: 0.4, loop: true },
+    fly:        { src: aud('flyingthes'),  volume: 0.5, loop: true },
+    levelup:    { src: aud('levelup'),     volume: 0.8 },
+    beginLevel: { src: aud('beginlevel'),  volume: 0.7 },
+    keyPickup:  { src: aud('key'),         volume: 0.6 },
+    death:      { src: aud('death'),       volume: 0.7 },
+    contact:    { src: aud('contact'),     volume: 0.6 },
+    lava:       { src: aud('lava'),        volume: 0.5 },
+    timer:      { src: aud('timer'),       volume: 0.5, loop: true },
+    flagPickup: { src: aud('flag'),        volume: 0.6 }
+};
 export const sfx = {};
 
 // Crea gli elementi Audio subito (src non ancora caricato)
