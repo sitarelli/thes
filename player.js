@@ -1,3 +1,4 @@
+
 /* -------------------------------------------------------------------------- */
 /* FISICA E LOGICA DEL PLAYER                                                 */
 /* -------------------------------------------------------------------------- */
@@ -485,7 +486,7 @@ export function update(dt, showRetryButtonCallback, currentLevelNumber, loadLeve
             else if (item.type === 'bulb') { 
                 restorePower(0.5); 
                 gameState.bulbs++; 
-                playSound('bonus'); 
+             playSound('bonus'); 
             }
             else if (item.type === 'star') { 
                 restorePower(0.25); 
@@ -495,7 +496,7 @@ export function update(dt, showRetryButtonCallback, currentLevelNumber, loadLeve
             else if (item.type === 'flag') { 
                 gameState.flags++; 
                 gameState.hasFlag = true;
-                playSound('bonus'); 
+                safePlayAudio(sfx.flagPickup);
             }
             else if (item.type === 'timer') { 
                 restorePower(0.1);

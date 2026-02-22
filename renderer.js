@@ -2,16 +2,37 @@
 /* RENDERING E DISEGNO                                                        */
 /* -------------------------------------------------------------------------- */
 
+
 import { config, player, gameState, camera, currentMap, items, enemies, lavas, triggers, decorations, lavaParticles, dustParticles, fireworkParticles, colorParticles, lavaAnimTime, isMobile } from './config.js';
 
 let ctx = null;
 let canvas = null;
 let sprites = {};
-let brickPattern = null; // Pattern di mattoni per lo sfondo
-let brickColorOverlay = 'rgba(70, 60, 50, 0.3)'; // Overlay colore casuale
 
-// Cache per sfondo (ottimizzazione performance)
-let bgCanvas = null;
+// Immagine di sfondo con parallasse (dinamica per livello)
+let bgImage = new Image();
+bgImage.src = 'jpg/sfondo1.jpg'; // Default: livello 1
+const BG_IMG_W = 2560;
+const BG_IMG_H = 1086;
+
+// Parallasse: quanto si muove lo sfondo rispetto alla camera (0 = fisso, 1 = 1:1)
+const PARALLAX_FACTOR = 0.3;
+
+// Carica lo sfondo corrispondente al numero di livello
+export function setBackgroundForLevel(levelNumber) {
+    const newSrc = `jpg/sfondo${levelNumber}.jpg`;
+    if (bgImage.src.endsWith(newSrc)) return; // Già caricato, evita reload inutile
+    const img = new Image();
+    img.src = newSrc;
+    img.onload = () => { bgImage = img; };
+    img.onerror = () => {
+        // Se sfondoN.jpg non esiste, usa sfondo1.jpg come fallback
+        console.warn(`sfondo${levelNumber}.jpg non trovato, uso sfondo1.jpg`);
+        const fallback = new Image();
+        fallback.src = 'sfondo1.jpg';
+        fallback.onload = () => { bgImage = fallback; };
+    };
+}
 
 export function initRenderer(canvasElement, contextElement, spritesData) {
     canvas = canvasElement;
@@ -27,85 +48,53 @@ export function initRenderer(canvasElement, contextElement, spritesData) {
             }
         });
     }
-
-    generateBrickPattern(); // Genera il pattern di mattoni (UNA VOLTA SOLA)
 }
 
-// Cambia solo l'overlay di colore (chiamato ad ogni livello)
+
+
+
+
+// Mantenuto per compatibilità con chiamate esterne (ora non fa nulla)
 export function randomizeBrickColor() {
-    const colorStyles = [
-        'rgba(60, 70, 85, 0.35)',  // Grigio-Blu-Marrone
-        'rgba(85, 60, 55, 0.35)',  // Marrone-Grigio-Rosso
-    ];
-    brickColorOverlay = colorStyles[Math.floor(Math.random() * colorStyles.length)];
-    
-    // OTTIMIZZAZIONE: Reset cache sfondo quando cambia livello
-    bgCanvas = null;
+    // Non più necessario: lo sfondo è un'immagine fissa
 }
 
-// Genera un pattern di mattoni irregolari casuali (UNA VOLTA SOLA)
-function generateBrickPattern() {
-    const patternCanvas = document.createElement('canvas');
-    const patternSize = 200;
-    patternCanvas.width = patternSize;
-    patternCanvas.height = patternSize;
-    const pctx = patternCanvas.getContext('2d');
-    
-    // Sfondo base scuro
-    pctx.fillStyle = '#1a1410';
-    pctx.fillRect(0, 0, patternSize, patternSize);
-    
-    // Disegna mattoni irregolari
-    const brickWidth = 40;
-    const brickHeight = 20;
-    const mortarSize = 2;
-    
-    for (let y = 0; y < patternSize + brickHeight; y += brickHeight + mortarSize) {
-        const offsetX = (Math.floor(y / (brickHeight + mortarSize)) % 2) * (brickWidth / 2);
-        
-        for (let x = -brickWidth; x < patternSize + brickWidth; x += brickWidth + mortarSize) {
-            const bx = x + offsetX;
-            const by = y;
-            
-            const seed = (bx * 7 + by * 13) % 100;
-            const variation = (seed / 100) * 30 - 15;
-            
-            const baseR = 60 + variation;
-            const baseG = 45 + variation;
-            const baseB = 30 + variation;
-            
-            // Mattone base
-            pctx.fillStyle = `rgb(${baseR}, ${baseG}, ${baseB})`;
-            pctx.fillRect(bx, by, brickWidth, brickHeight);
-            
-            // Texture ridotta (10 invece di 20 per ottimizzazione)
-            for (let i = 0; i < 10; i++) {
-                const px = bx + (seed * i * 7) % brickWidth;
-                const py = by + (seed * i * 11) % brickHeight;
-                const size = 1 + (seed * i) % 2;
-                const alpha = 0.1 + ((seed * i) % 30) / 300;
-                
-                pctx.fillStyle = `rgba(${baseR + 20}, ${baseG + 15}, ${baseB + 10}, ${alpha})`;
-                pctx.fillRect(px, py, size, size);
-            }
-            
-            // Ombreggiatura
-            const gradient = pctx.createLinearGradient(bx, by, bx, by + brickHeight);
-            gradient.addColorStop(0, `rgba(255, 255, 255, 0.05)`);
-            gradient.addColorStop(0.5, 'rgba(0, 0, 0, 0)');
-            gradient.addColorStop(1, 'rgba(0, 0, 0, 0.2)');
-            pctx.fillStyle = gradient;
-            pctx.fillRect(bx, by, brickWidth, brickHeight);
-            
-            // Bordi
-            pctx.strokeStyle = `rgba(0, 0, 0, 0.3)`;
-            pctx.lineWidth = 1;
-            pctx.strokeRect(bx + 0.5, by + 0.5, brickWidth - 1, brickHeight - 1);
+// Funzione di disegno sfondo con parallasse
+function drawBackground() {
+    if (!bgImage.complete || bgImage.naturalWidth === 0) {
+        // Fallback se l'immagine non è ancora caricata
+        ctx.fillStyle = '#1a1410';
+        ctx.fillRect(0, 0, config.viewportWidth, config.viewportHeight);
+        return;
+    }
+
+    const vW = config.viewportWidth;
+    const vH = config.viewportHeight;
+
+    // Offset parallasse: lo sfondo scorre più lentamente della camera
+    const parallaxOffsetX = camera.x * PARALLAX_FACTOR;
+    const parallaxOffsetY = camera.y * PARALLAX_FACTOR;
+
+    // Scala l'immagine per coprire sempre l'intera viewport in altezza
+    const scale = vH / BG_IMG_H;
+    const scaledW = BG_IMG_W * scale;
+    const scaledH = vH; // = BG_IMG_H * scale
+
+    // Quante volte dobbiamo ripetere l'immagine orizzontalmente?
+    // (per mappe molto larghe con forte parallasse)
+    const startX = -(parallaxOffsetX % scaledW);
+
+    for (let tx = startX; tx < vW; tx += scaledW) {
+        ctx.drawImage(bgImage, tx, -(parallaxOffsetY % scaledH), scaledW, scaledH);
+        // Gestione verticale in loop se la mappa è più alta della viewport scalata
+        if (parallaxOffsetY % scaledH !== 0) {
+            ctx.drawImage(bgImage, tx, -(parallaxOffsetY % scaledH) + scaledH, scaledW, scaledH);
         }
     }
-    
-    brickPattern = ctx.createPattern(patternCanvas, 'repeat');
-    randomizeBrickColor(); // Inizializza colore
+
+    // Overlay scuro per non disturbare la leggibilità del gameplay
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+    ctx.fillRect(0, 0, vW, vH);
 }
 
 function drawImg(img, x, y, wS, hS, flip = false) { 
@@ -485,32 +474,8 @@ export function draw(gameRunning) {
         return; 
     }
     
-    // SFONDO FISSO: Disegna pattern di mattoni (completamente statico)
-    if (brickPattern) {
-        // Crea canvas cache se non esiste (UNA VOLTA SOLA)
-        if (!bgCanvas) {
-            bgCanvas = document.createElement('canvas');
-            bgCanvas.width = config.viewportWidth;
-            bgCanvas.height = config.viewportHeight;
-            
-            const bgCtx = bgCanvas.getContext('2d');
-            
-            // Disegna pattern sulla cache
-            bgCtx.fillStyle = brickPattern;
-            bgCtx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
-            
-            // Overlay colore
-            bgCtx.fillStyle = brickColorOverlay;
-            bgCtx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
-        }
-        
-        // Disegna sfondo FISSO (mai si muove)
-        ctx.drawImage(bgCanvas, 0, 0);
-        
-        // Overlay scuro per non disturbare il gameplay
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
-        ctx.fillRect(0, 0, config.viewportWidth, config.viewportHeight);
-    }
+    // SFONDO CON PARALLASSE: immagine sfondo1.jpg
+    drawBackground();
     
     // OTTIMIZZAZIONE: Mappa (disegna solo tile visibili - culling)
     const tileZoom = config.tileSize * config.zoom;

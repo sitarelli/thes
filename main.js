@@ -5,7 +5,7 @@
 import { config, gameState, player, setCurrentLevelNumber, setGameRunning, setCurrentMap, setItems, setEnemies, setTriggers, setDecorations, setLavas, setLavaParticles, setDustParticles, setFireworkParticles, setColorParticles, currentLevelNumber, gameRunning, isMobile } from './config.js';
 import { initInput, requestFullscreen, setFullscreenActivated } from './input.js';
 import { update, respawnPlayer, createColorParticles } from './player.js';
-import { initRenderer, draw, updateHUD, randomizeBrickColor } from './renderer.js';
+import { initRenderer, draw, updateHUD, randomizeBrickColor, setBackgroundForLevel } from './renderer.js';
 
 // Canvas setup
 const canvas = document.getElementById('game-canvas');
@@ -71,13 +71,14 @@ const audioDefinitions = {
     doorClose:  { src: 'audio/doorclose.ogg',   volume: 0.6 },
     walk:       { src: 'audio/walkingthes.ogg', volume: 0.4, loop: true },
     fly:        { src: 'audio/flyingthes.ogg',  volume: 0.5, loop: true },
-    levelup:    { src: 'audio/levelup.ogg',     volume: 0.7 },
-    beginLevel: { src: 'audio/beginlevel.ogg',  volume: 0.7 },
+    levelup:    { src: 'audio/levelup.ogg',     volume: 0.8 },
+    beginLevel: { src: 'audio/beginlevel.webm',  volume: 0.7 },
     keyPickup:  { src: 'audio/key.ogg',         volume: 0.6 },
-    death:      { src: 'audio/death.ogg',       volume: 0.7 },
-    contact:    { src: 'audio/contact.ogg',     volume: 0.6 },
-    lava:       { src: 'audio/lava.ogg',        volume: 0.5 },
-    timer:      { src: 'audio/timer.ogg',       volume: 0.8, loop: true }
+    death:      { src: 'audio/death.webm',       volume: 0.7 },
+    contact:    { src: 'audio/contact.webm',     volume: 0.6 },
+    lava:       { src: 'audio/lava.webm',        volume: 0.5 },
+    timer:      { src: 'audio/timer.ogg',       volume: 0.5, loop: true },
+    flagPickup: { src: 'audio/flag.ogg',         volume: 0.6 }
 };
 
 export const sfx = {};
@@ -300,19 +301,31 @@ export function loadLevelScript(n) {
     document.body.appendChild(s);
 }
 
+
 function drawVictoryScreen() {
     setGameRunning(false);
     ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Calcola una dimensione del font responsiva (massimo 40px, ma si restringe su schermi piccoli)
+    const titleFontSize = Math.min(40, canvas.width / 15); 
+    const subtitleFontSize = Math.min(24, canvas.width / 25);
+
     ctx.fillStyle = '#00ffff';
-    ctx.font = 'bold 50px Orbitron, sans-serif';
+    ctx.font = `bold ${titleFontSize}px Orbitron, sans-serif`;
     ctx.textAlign = 'center';
+    
+    // Disegna il titolo
     ctx.fillText('HAI COMPLETATO TUTTI I LIVELLI!', canvas.width / 2, canvas.height / 2 - 50);
-    ctx.font = '30px Orbitron, sans-serif';
+    
+    ctx.font = `${subtitleFontSize}px Orbitron, sans-serif`;
     ctx.fillStyle = '#ffff00';
-    ctx.fillText(`Stelle: ${gameState.stars} | Bandiere: ${gameState.flags} | Lampadine: ${gameState.bulbs}`, 
+    
+    // Disegna i punteggi
+    ctx.fillText(`Stelle: ${gameState.stars} | Barboncini: ${gameState.flags} | Ricariche: ${gameState.bulbs}`, 
         canvas.width / 2, canvas.height / 2 + 20);
 }
+
 
 function initGame(levelData) {
     if (!levelData) return;
@@ -330,8 +343,8 @@ function initGame(levelData) {
     timerPowerUp.timeLeft = 0;
     if (sfx.timer && !sfx.timer.paused) { try { sfx.timer.pause(); sfx.timer.currentTime = 0; } catch(e) {} }
     
-    // Cambia colore sfondo mattoni ad ogni livello
-    randomizeBrickColor();
+    // Carica lo sfondo corrispondente al livello corrente (sfondo1.jpg, sfondo2.jpg, ecc.)
+    setBackgroundForLevel(currentLevelNumber);
     
     setCurrentMap(JSON.parse(JSON.stringify(levelData.map)));
     config.tileSize = levelData.tileSize || 20;
