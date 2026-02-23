@@ -295,6 +295,30 @@ body.game-active * {
     font-size: 16px;
 }
 
+/* INDICATORI CHIAVE E BANDIERA - SEMPLICI */
+.key-indicator, .flag-indicator {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: visible;
+}
+
+.key-indicator img, .flag-indicator img {
+    width: 24px;
+    height: 24px;
+    image-rendering: pixelated;
+    object-fit: contain;
+}
+
+.key-indicator.has-key, .flag-indicator.has-flag {
+    /* Rimosso bagliore e animazione */
+    z-index: 2;
+    opacity: 1;
+}
+
 /* ZOOM CONTROLS - ELEGANTI E MINIMALI */
 .zoom-area {
     display: flex;

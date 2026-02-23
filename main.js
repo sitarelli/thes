@@ -357,22 +357,29 @@ if (tapOverlay) {
 export function updateKeyHUD() {
     const keyIndicator = document.querySelector('.key-indicator');
     if (keyIndicator) {
-        if (gameState.hasKey) {
+        const currentlyHasImg = keyIndicator.querySelector('img');
+        const isLit = keyIndicator.classList.contains('has-key');
+
+        if (gameState.hasKey && (!currentlyHasImg || !isLit)) {
             keyIndicator.classList.add('has-key');
-            if (!keyIndicator.querySelector('img')) keyIndicator.innerHTML = '<img src="png/key.png" style="width:24px;height:24px;image-rendering:pixelated;vertical-align:middle;">';
-        } else {
+            keyIndicator.innerHTML = '<img src="png/key.png" alt="Key">';
+        } else if (!gameState.hasKey && (!currentlyHasImg || isLit)) {
             keyIndicator.classList.remove('has-key');
-            keyIndicator.innerHTML = '<img src="png/key.png" style="width:24px;height:24px;image-rendering:pixelated;vertical-align:middle;opacity:0.25;filter:grayscale(1);">';
+            keyIndicator.innerHTML = '<img src="png/key.png" alt="Key" style="opacity:0.2;">';
         }
     }
+
     const flagIndicator = document.querySelector('.flag-indicator');
     if (flagIndicator) {
-        if (gameState.hasFlag) {
+        const currentlyHasImg = flagIndicator.querySelector('img');
+        const isLit = flagIndicator.classList.contains('has-flag');
+
+        if (gameState.hasFlag && (!currentlyHasImg || !isLit)) {
             flagIndicator.classList.add('has-flag');
-            flagIndicator.innerHTML = '<img src="png/flag.png" style="width:24px;height:24px;image-rendering:pixelated;vertical-align:middle;">';
-        } else {
+            flagIndicator.innerHTML = '<img src="png/flag.png" alt="Flag">';
+        } else if (!gameState.hasFlag && (!currentlyHasImg || isLit)) {
             flagIndicator.classList.remove('has-flag');
-            flagIndicator.innerHTML = '<img src="png/flag.png" style="width:24px;height:24px;image-rendering:pixelated;vertical-align:middle;opacity:0.25;filter:grayscale(1);">';
+            flagIndicator.innerHTML = '<img src="png/flag.png" alt="Flag" style="opacity:0.2;">';
         }
     }
 }

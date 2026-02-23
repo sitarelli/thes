@@ -35,61 +35,41 @@ function initTouchControls() {
     
     if (!joystickBase || !btnFly) return;
 
-    let startX = 0;
-    const maxDist = 40;
-    const deadZone = 12;       // Zona morta per entrare in una direzione
-    const hysteresis = 5;      // Margine extra per USCIRE dalla direzione già scelta
-    let lockedDir = 0;         // -1 sinistra, 0 neutro, 1 destra — evita oscillazioni
+    const maxDist = 40; 
+    const deadZone = 15; // Aumentata per evitare scatti
+
+    const handleJoystick = (e) => {
+        e.preventDefault();
+        const touch = e.touches[0] || e.changedTouches[0];
+        const rect = joystickBase.getBoundingClientRect();
+        const centerX = rect.left + rect.width / 2;
+        
+        // Calcoliamo la distanza dal centro fisico della base
+        const deltaX = touch.clientX - centerX;
+        const moveX = Math.max(-maxDist, Math.min(maxDist, deltaX));
+        
+        joystickStick.style.transform = `translate(calc(-50% + ${moveX}px), -50%)`;
+        
+        if (moveX < -deadZone) { 
+            keys.left = true; 
+            keys.right = false; 
+        } 
+        else if (moveX > deadZone) { 
+            keys.right = true; 
+            keys.left = false; 
+        } 
+        else { 
+            keys.left = false; 
+            keys.right = false; 
+        }
+    };
 
     joystickBase.addEventListener('touchstart', (e) => {
         if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
-        e.preventDefault();
-        startX = e.changedTouches[0].clientX;
-        lockedDir = 0;
-        keys.left = false;
-        keys.right = false;
+        handleJoystick(e);
     }, { passive: false });
 
-    joystickBase.addEventListener('touchmove', (e) => {
-        e.preventDefault();
-        const currentX = e.changedTouches[0].clientX;
-        const deltaX = currentX - startX;
-        const moveX = Math.max(-maxDist, Math.min(maxDist, deltaX));
-        joystickStick.style.transform = `translate(calc(-50% + ${moveX}px), -50%)`;
-
-        // Soglia per ENTRARE in una direzione vs soglia per USCIRNE (isteresi)
-        // Se già in una direzione, serve uno spostamento maggiore per cambiarla
-        const enterThreshold = deadZone;
-        const exitThreshold = deadZone - hysteresis; // = 7px: più basso, più "morbido" il rilascio
-
-        if (lockedDir === 0) {
-            // Neutro: entra in una direzione solo oltre la deadZone
-            if (moveX < -enterThreshold) {
-                lockedDir = -1;
-            } else if (moveX > enterThreshold) {
-                lockedDir = 1;
-            }
-        } else if (lockedDir === -1) {
-            // Stava andando a sinistra: torna neutro solo se rientra nell'exitThreshold
-            if (moveX > -exitThreshold) {
-                lockedDir = 0;
-            } else if (moveX > enterThreshold) {
-                // Cambio netto verso destra
-                lockedDir = 1;
-            }
-        } else if (lockedDir === 1) {
-            // Stava andando a destra: torna neutro solo se rientra nell'exitThreshold
-            if (moveX < exitThreshold) {
-                lockedDir = 0;
-            } else if (moveX < -enterThreshold) {
-                // Cambio netto verso sinistra
-                lockedDir = -1;
-            }
-        }
-
-        keys.left  = lockedDir === -1;
-        keys.right = lockedDir ===  1;
-    }, { passive: false });
+    joystickBase.addEventListener('touchmove', handleJoystick, { passive: false });
 
     const resetJoystick = (e) => {
         if (e) e.preventDefault();
@@ -132,8 +112,6 @@ function isCapacitor() {
 }
 
 function checkOrientation() {
-    // SE SIAMO IN APK (Capacitor), NON mostrare l'overlay rotazione
-    // perché l'orientamento è già forzato dal manifest
     if (isCapacitor()) {
         const rotateMsg = document.getElementById('rotate-message');
         if (rotateMsg) {
@@ -143,19 +121,14 @@ function checkOrientation() {
         return;
     }
     
-    // SOLO su browser web: mostra overlay se verticale
     const rotateMsg = document.getElementById('rotate-message');
     if (rotateMsg) {
         if (window.innerWidth < 900 && window.innerHeight > window.innerWidth) {
-            // Portrait su mobile: mostra il messaggio e blocca i touch sotto
             rotateMsg.style.display = 'flex';
             rotateMsg.style.pointerEvents = 'auto';
         } else {
-            // Landscape (o desktop): nascondi e libera completamente i touch
             rotateMsg.style.display = 'none';
             rotateMsg.style.pointerEvents = 'none';
-            
-            // Ripristina interattività del tap-to-start dopo la rotazione
             const tapOverlay = document.getElementById('tap-to-start');
             if (tapOverlay && tapOverlay.classList.contains('show')) {
                 tapOverlay.style.pointerEvents = 'auto';
@@ -167,8 +140,6 @@ function checkOrientation() {
 function initOrientation() {
     window.addEventListener('load', checkOrientation);
     window.addEventListener('resize', checkOrientation);
-    // DELAY obbligatorio: orientationchange scatta PRIMA che innerWidth/Height si aggiornino
-    // Senza il timeout, checkOrientation vede ancora le dimensioni del portrait e blocca il tap
     window.addEventListener('orientationchange', () => setTimeout(checkOrientation, 350));
 
     if (isIOS()) {
@@ -186,7 +157,6 @@ function initOrientation() {
 let fullscreenActivated = false;
 
 export function requestFullscreen() {
-    // NON richiedere fullscreen se siamo in APK (è già fullscreen)
     if (isCapacitor()) return;
     
     const elem = document.documentElement;
