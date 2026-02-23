@@ -1,5 +1,5 @@
 /* ============================================
-   THESEUS - MOBILE-OPTIMIZED ARCADE THEME
+   ICAROUS - MOBILE-OPTIMIZED ARCADE THEME
    Con Glassmorphism Moderno
    ============================================ */
 
@@ -480,33 +480,31 @@ body.game-active * {
 .controls-left,
 .controls-right {
     position: absolute;
-    bottom: 80px;
     pointer-events: all;
     touch-action: none;
 }
 
+/* Il FLY è 110px, bottom 80px → centro a 135px dal basso.
+   Il joystick-base è 150px → bottom = 135 - 75 = 60px per allineare i centri */
 .controls-left { 
-    left: 25px; 
+    left: 25px;
+    bottom: 60px;
 }
 
 .controls-right { 
-    right: 25px; 
+    right: 25px;
+    bottom: 80px;
 }
 
-/* Joystick con Glassmorphism */
+/* Joystick - base invisibile, solo pomello visibile */
 #joystick-base {
     width: 150px;
     height: 150px;
     border-radius: 50%;
     position: relative;
-    
-    /* Glassmorphism */
-    background: rgba(10, 20, 50, 0.4);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 2px solid rgba(0, 255, 255, 0.3);
-    box-shadow: 0 8px 32px 0 rgba(0, 255, 255, 0.2),
-                inset 0 0 20px rgba(0, 255, 255, 0.1);
+    background: transparent;
+    border: none;
+    box-shadow: none;
 }
 
 #joystick-stick {
@@ -599,7 +597,7 @@ body.game-active * {
         height: 75px;
     }
     
-    .controls-left { left: 40px; }
+    .controls-left { left: 40px; bottom: 60px; }
     .controls-right { right: 40px; }
 }
 
@@ -621,7 +619,7 @@ body.game-active * {
         height: 60px;
     }
     
-    .controls-left { left: 15px; }
+    .controls-left { left: 15px; bottom: 65px; }
     .controls-right { right: 15px; }
 }
 
