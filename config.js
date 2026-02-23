@@ -43,7 +43,7 @@ export const config = {
     baseThrust: -0.80,
     maxFallSpeed: 4.6,
     maxFlySpeed: -0.36,
-    enemySpeedMultiplier: 0.15,
+    enemySpeedMultiplier: 0.20,
     zoom: isMobile ? 1.5 : 1,  // 50% di zoom in più su mobile
     tileSize: 0,
     hitboxMargin: 0.25,
