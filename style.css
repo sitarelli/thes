@@ -661,37 +661,3 @@ body.game-active * {
     );
     pointer-events: none;
 }
-
-/* ZOOM CONTROLS HUD */
-.zoom-controls {
-    gap: 4px;
-    padding: 4px 8px;
-    background: rgba(0, 255, 255, 0.1);
-    border: 1px solid rgba(0, 255, 255, 0.3);
-    border-radius: 8px;
-}
-
-.hud-btn {
-    background: rgba(0, 255, 255, 0.15);
-    border: 1px solid var(--neon-cyan);
-    color: var(--neon-cyan);
-    border-radius: 4px;
-    width: 28px;
-    height: 28px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 18px;
-    font-weight: bold;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    touch-action: manipulation; /* Ottimizza per mobile */
-}
-
-.hud-btn:active {
-    background: var(--neon-cyan);
-    color: #000;
-    transform: scale(0.9);
-}
-
-
