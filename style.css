@@ -1,5 +1,5 @@
 /* ============================================
-   ICAROUS - MOBILE-OPTIMIZED ARCADE THEME
+   THESEUS - MOBILE-OPTIMIZED ARCADE THEME
    Con Glassmorphism Moderno
    ============================================ */
 
@@ -480,31 +480,33 @@ body.game-active * {
 .controls-left,
 .controls-right {
     position: absolute;
+    bottom: 80px;
     pointer-events: all;
     touch-action: none;
 }
 
-/* Il FLY è 110px, bottom 80px → centro a 135px dal basso.
-   Il joystick-base è 150px → bottom = 135 - 75 = 60px per allineare i centri */
 .controls-left { 
-    left: 25px;
-    bottom: 60px;
+    left: 25px; 
 }
 
 .controls-right { 
-    right: 25px;
-    bottom: 80px;
+    right: 25px; 
 }
 
-/* Joystick - base invisibile, solo pomello visibile */
+/* Joystick con Glassmorphism */
 #joystick-base {
     width: 150px;
     height: 150px;
     border-radius: 50%;
     position: relative;
-    background: transparent;
-    border: none;
-    box-shadow: none;
+    
+    /* Glassmorphism */
+    background: rgba(10, 20, 50, 0.4);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 2px solid rgba(0, 255, 255, 0.3);
+    box-shadow: 0 8px 32px 0 rgba(0, 255, 255, 0.2),
+                inset 0 0 20px rgba(0, 255, 255, 0.1);
 }
 
 #joystick-stick {
@@ -597,7 +599,7 @@ body.game-active * {
         height: 75px;
     }
     
-    .controls-left { left: 40px; bottom: 60px; }
+    .controls-left { left: 40px; }
     .controls-right { right: 40px; }
 }
 
@@ -619,7 +621,7 @@ body.game-active * {
         height: 60px;
     }
     
-    .controls-left { left: 15px; bottom: 65px; }
+    .controls-left { left: 15px; }
     .controls-right { right: 15px; }
 }
 
@@ -659,3 +661,37 @@ body.game-active * {
     );
     pointer-events: none;
 }
+
+/* ZOOM CONTROLS HUD */
+.zoom-controls {
+    gap: 4px;
+    padding: 4px 8px;
+    background: rgba(0, 255, 255, 0.1);
+    border: 1px solid rgba(0, 255, 255, 0.3);
+    border-radius: 8px;
+}
+
+.hud-btn {
+    background: rgba(0, 255, 255, 0.15);
+    border: 1px solid var(--neon-cyan);
+    color: var(--neon-cyan);
+    border-radius: 4px;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    touch-action: manipulation; /* Ottimizza per mobile */
+}
+
+.hud-btn:active {
+    background: var(--neon-cyan);
+    color: #000;
+    transform: scale(0.9);
+}
+
+
