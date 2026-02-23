@@ -36,13 +36,18 @@ function initTouchControls() {
     if (!joystickBase || !btnFly) return;
 
     let startX = 0;
-    const maxDist = 40; 
-    const deadZone = 10; 
+    const maxDist = 40;
+    const deadZone = 12;       // Zona morta per entrare in una direzione
+    const hysteresis = 5;      // Margine extra per USCIRE dalla direzione già scelta
+    let lockedDir = 0;         // -1 sinistra, 0 neutro, 1 destra — evita oscillazioni
 
     joystickBase.addEventListener('touchstart', (e) => {
         if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
         e.preventDefault();
         startX = e.changedTouches[0].clientX;
+        lockedDir = 0;
+        keys.left = false;
+        keys.right = false;
     }, { passive: false });
 
     joystickBase.addEventListener('touchmove', (e) => {
@@ -51,19 +56,39 @@ function initTouchControls() {
         const deltaX = currentX - startX;
         const moveX = Math.max(-maxDist, Math.min(maxDist, deltaX));
         joystickStick.style.transform = `translate(calc(-50% + ${moveX}px), -50%)`;
-        
-        if (moveX < -deadZone) { 
-            keys.left = true; 
-            keys.right = false; 
-        } 
-        else if (moveX > deadZone) { 
-            keys.right = true; 
-            keys.left = false; 
-        } 
-        else { 
-            keys.left = false; 
-            keys.right = false; 
+
+        // Soglia per ENTRARE in una direzione vs soglia per USCIRNE (isteresi)
+        // Se già in una direzione, serve uno spostamento maggiore per cambiarla
+        const enterThreshold = deadZone;
+        const exitThreshold = deadZone - hysteresis; // = 7px: più basso, più "morbido" il rilascio
+
+        if (lockedDir === 0) {
+            // Neutro: entra in una direzione solo oltre la deadZone
+            if (moveX < -enterThreshold) {
+                lockedDir = -1;
+            } else if (moveX > enterThreshold) {
+                lockedDir = 1;
+            }
+        } else if (lockedDir === -1) {
+            // Stava andando a sinistra: torna neutro solo se rientra nell'exitThreshold
+            if (moveX > -exitThreshold) {
+                lockedDir = 0;
+            } else if (moveX > enterThreshold) {
+                // Cambio netto verso destra
+                lockedDir = 1;
+            }
+        } else if (lockedDir === 1) {
+            // Stava andando a destra: torna neutro solo se rientra nell'exitThreshold
+            if (moveX < exitThreshold) {
+                lockedDir = 0;
+            } else if (moveX < -enterThreshold) {
+                // Cambio netto verso sinistra
+                lockedDir = -1;
+            }
         }
+
+        keys.left  = lockedDir === -1;
+        keys.right = lockedDir ===  1;
     }, { passive: false });
 
     const resetJoystick = (e) => {
