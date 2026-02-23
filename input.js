@@ -40,7 +40,11 @@ function initTouchControls() {
 
     const handleJoystick = (e) => {
         e.preventDefault();
-        const touch = e.touches[0] || e.changedTouches[0];
+        // Usiamo targetTouches[0] per prendere solo il dito che sta toccando il joystick
+        // ignorando eventuali altri tocchi (come il tasto FLY)
+        const touch = e.targetTouches[0];
+        if (!touch) return;
+
         const rect = joystickBase.getBoundingClientRect();
         const centerX = rect.left + rect.width / 2;
         
