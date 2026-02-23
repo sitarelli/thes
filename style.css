@@ -52,7 +52,7 @@ body.game-active * {
    ROTATE OVERLAY
    ============================================ */
 
-#rotate-message {
+.rotate-overlay {
     display: none;
     position: fixed;
     inset: 0;
@@ -83,13 +83,6 @@ body.game-active * {
     50% { transform: rotate(90deg); }
 }
 
-/* Mostra solo in portrait */
-@media (max-width: 900px) and (orientation: portrait) {
-    #rotate-message { display: flex; }
-    #game-container,
-    #touch-controls { display: none !important; }
-}
-
 /* ============================================
    TAP TO START - Glassmorphism
    ============================================ */
@@ -113,8 +106,6 @@ body.game-active * {
     animation: tapPulse 2s infinite;
     padding: 40px;
     border-radius: 20px;
-    
-    /* Glassmorphism */
     background: rgba(10, 20, 40, 0.4);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
@@ -144,17 +135,6 @@ body.game-active * {
     margin-bottom: 30px;
 }
 
-.tap-icon {
-    font-size: 60px;
-    margin: 20px 0;
-    animation: bounce 1s infinite;
-}
-
-@keyframes bounce {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-10px); }
-}
-
 .tap-button {
     margin-top: 30px;
     padding: 18px 40px;
@@ -169,8 +149,6 @@ body.game-active * {
     display: inline-block;
     cursor: pointer;
     transition: all 0.3s ease;
-    
-    /* Glassmorphism sul pulsante */
     background: rgba(0, 255, 65, 0.1);
     backdrop-filter: blur(5px);
 }
@@ -218,16 +196,6 @@ body.game-active * {
     transition: width 0.3s ease, background-color 0.5s ease;
 }
 
-#power-bar.low {
-    background: linear-gradient(90deg, var(--neon-red), var(--neon-yellow));
-    animation: powerPulse 0.5s infinite;
-}
-
-@keyframes powerPulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.7; }
-}
-
 /* ============================================
    GAME CONTAINER
    ============================================ */
@@ -240,8 +208,9 @@ body.game-active * {
     padding-top: 10px;
 }
 
-/* Header con Glassmorphism */
 .compact-header {
+    position: relative;
+    z-index: 1000;
     height: 50px;
     background: rgba(10, 10, 30, 0.7);
     backdrop-filter: blur(15px);
@@ -276,16 +245,14 @@ body.game-active * {
 }
 
 #game-canvas {
-    width: 55%;
-    height: auto;
-    max-height: 75vh;
+    width: 100%;
+    height: 100%;
+    max-width: 100%;
+    max-height: 100%;
     object-fit: contain;
-    
     border: 3px solid var(--neon-cyan);
     border-radius: 10px;
-    box-shadow: var(--glow-cyan),
-                0 0 30px rgba(0, 255, 255, 0.2),
-                inset 0 0 20px rgba(0, 255, 255, 0.05);
+    box-shadow: var(--glow-cyan);
     image-rendering: pixelated;
     background: #000;
 }
@@ -296,7 +263,7 @@ body.game-active * {
 
 #hud-compact {
     display: flex;
-    gap: 16px;
+    gap: 12px;
     align-items: center;
 }
 
@@ -309,104 +276,68 @@ body.game-active * {
     border-radius: 8px;
     background: rgba(0, 255, 255, 0.05);
     border: 1px solid rgba(0, 255, 255, 0.2);
-    transition: all 0.3s ease;
-}
-
-.hud-item:hover {
-    background: rgba(0, 255, 255, 0.1);
-    transform: scale(1.05);
 }
 
 .hud-label {
     color: var(--neon-cyan);
     font-weight: bold;
     font-family: 'Orbitron', sans-serif;
-    letter-spacing: 1px;
 }
 
 .hud-value {
     color: var(--neon-yellow);
-    min-width: 24px;
+    min-width: 20px;
     text-align: center;
     font-weight: bold;
-    text-shadow: 0 0 5px var(--neon-yellow);
 }
 
 .hud-icon {
+    font-size: 16px;
+}
+
+/* ZOOM CONTROLS - ELEGANTI E MINIMALI */
+.zoom-area {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    background: transparent;
+    border: none;
+    padding: 0;
+}
+
+.zoom-btn {
+    background: transparent;
+    border: none;
+    color: var(--neon-cyan);
+    width: 48px;
+    height: 48px;
+    font-size: 32px;
+    font-weight: 300;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    pointer-events: auto;
+    touch-action: none;
+    text-shadow: 0 0 10px var(--neon-cyan);
+    transition: transform 0.1s ease, opacity 0.1s ease;
+}
+
+.zoom-btn:active {
+    opacity: 0.5;
+    transform: scale(1.2);
+}
+
+.zoom-icon {
     font-size: 18px;
-    filter: drop-shadow(0 0 3px currentColor);
-}
-
-.key-indicator {
-    font-size: 0; /* Nasconde l'icona testuale precedente */
-    width: 24px;  /* Dimensione calibrata per non allargare l'HUD */
-    height: 24px;
-    display: inline-block;
-    background-image: url('png/key.png'); /* Assicurati che il percorso sia corretto */
-    background-size: contain;
-    background-repeat: no-repeat;
-    background-position: center;
-    
-    /* Stato "Slot Vuoto" */
-    opacity: 0.25; 
-    filter: grayscale(100%); 
-    transform: scale(0.9);
-    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-
-.key-indicator.has-key {
-    /* Stato "Chiave Presa" */
-    opacity: 1;
-    filter: grayscale(0%) drop-shadow(0 0 10px var(--neon-yellow));
-    animation: keyNeonPulse 1.2s infinite alternate;
-}
-
-@keyframes keyNeonPulse {
-    0% { 
-        transform: scale(1.0) rotate(-5deg); 
-        filter: grayscale(0%) drop-shadow(0 0 5px var(--neon-yellow)); 
-    }
-    100% { 
-        transform: scale(1.15) rotate(5deg); 
-        filter: grayscale(0%) drop-shadow(0 0 12px var(--neon-yellow)); 
-    }
-}
-
-/* --- FLAG INDICATOR (cane/bandiera) --- */
-.flag-indicator {
-    font-size: 0;
-    width: 28px;
-    height: 28px;
-    display: inline-block;
-    background-image: url('png/flag.png');
-    background-size: contain;
-    background-repeat: no-repeat;
-    background-position: center;
-    opacity: 0.25;
-    filter: grayscale(100%);
-    transform: scale(0.9);
-    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-
-.flag-indicator.has-flag {
-    opacity: 1;
-    filter: grayscale(0%) drop-shadow(0 0 10px var(--neon-cyan));
-    animation: flagNeonPulse 1.2s infinite alternate;
-}
-
-@keyframes flagNeonPulse {
-    0% {
-        transform: scale(1.0) rotate(-4deg);
-        filter: grayscale(0%) drop-shadow(0 0 5px var(--neon-cyan));
-    }
-    100% {
-        transform: scale(1.15) rotate(4deg);
-        filter: grayscale(0%) drop-shadow(0 0 14px var(--neon-cyan));
-    }
+    pointer-events: none;
+    opacity: 0.5;
+    color: var(--neon-cyan);
+    margin: 0 -5px;
 }
 
 /* ============================================
-   GAME OVER OVERLAY - HTML puro, sempre centrato
+   GAME OVER OVERLAY
    ============================================ */
 
 #game-over-overlay {
@@ -428,45 +359,35 @@ body.game-active * {
     flex-direction: column;
     align-items: center;
     gap: 24px;
-    padding: 44px 70px;
-    background: rgba(0, 0, 0, 0.65);
+    padding: 40px;
+    background: rgba(0, 0, 0, 0.8);
     border: 3px solid #ff0000;
     border-radius: 14px;
-    box-shadow: 0 0 50px rgba(255, 0, 0, 0.5), inset 0 0 30px rgba(255, 0, 0, 0.1);
+    box-shadow: 0 0 30px rgba(255, 0, 0, 0.5);
 }
 
 .game-over-text {
     font-family: 'Orbitron', sans-serif;
-    font-size: clamp(40px, 7vw, 72px);
+    font-size: 48px;
     font-weight: 900;
     color: #ffffff;
-    letter-spacing: 8px;
-    text-shadow: 0 0 20px #ff0000, 0 0 50px #ff0000;
+    text-shadow: 0 0 20px #ff0000;
 }
 
 .game-over-btn {
-    padding: 14px 44px;
+    padding: 12px 30px;
     font-family: 'Orbitron', sans-serif;
-    font-size: clamp(16px, 2.5vw, 26px);
+    font-size: 20px;
     font-weight: 700;
-    letter-spacing: 4px;
     color: #ffffff;
     background: #cc0000;
-    border: 2px solid #ff4444;
+    border: none;
     border-radius: 8px;
     cursor: pointer;
-    box-shadow: 0 0 20px rgba(255, 0, 0, 0.5);
-    transition: background 0.2s, transform 0.1s;
 }
 
-.game-over-btn:hover { background: #ff2222; transform: scale(1.06); }
-.game-over-btn:active { transform: scale(0.96); }
-
-
-
 /* ============================================
-   TOUCH CONTROLS - Glassmorphism Migliorato
-   Fix specifico per tablet
+   TOUCH CONTROLS
    ============================================ */
 
 #touch-controls {
@@ -480,184 +401,47 @@ body.game-active * {
 .controls-left,
 .controls-right {
     position: absolute;
-    bottom: 80px;
+    bottom: 40px;
     pointer-events: all;
-    touch-action: none;
 }
 
-.controls-left { 
-    left: 25px; 
-}
+.controls-left { left: 40px; }
+.controls-right { right: 40px; }
 
-.controls-right { 
-    right: 25px; 
-}
-
-/* Joystick con Glassmorphism */
 #joystick-base {
-    width: 150px;
-    height: 150px;
+    width: 120px;
+    height: 120px;
     border-radius: 50%;
-    position: relative;
-    
-    /* Glassmorphism */
-    background: rgba(10, 20, 50, 0.4);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+    background: rgba(0, 255, 255, 0.1);
     border: 2px solid rgba(0, 255, 255, 0.3);
-    box-shadow: 0 8px 32px 0 rgba(0, 255, 255, 0.2),
-                inset 0 0 20px rgba(0, 255, 255, 0.1);
+    position: relative;
 }
 
 #joystick-stick {
-    width: 70px;
-    height: 70px;
-    background: radial-gradient(circle, var(--neon-magenta), #aa00aa);
+    width: 60px;
+    height: 60px;
+    background: var(--neon-magenta);
     border-radius: 50%;
     position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    border: 3px solid rgba(255, 0, 255, 0.5);
-    box-shadow: var(--glow-magenta),
-                inset 0 0 15px rgba(255, 255, 255, 0.3);
-    transition: all 0.1s ease;
+    box-shadow: var(--glow-magenta);
 }
 
-/* FLY Button - Fix per tablet */
 #btn-fly {
-    width: 110px;
-    height: 110px;
+    width: 100px;
+    height: 100px;
     border-radius: 50%;
     border: 3px solid var(--neon-green);
-    background: radial-gradient(circle, rgba(0, 255, 65, 0.3), rgba(0, 255, 65, 0.1));
+    background: rgba(0, 255, 65, 0.1);
     color: var(--neon-green);
     font-family: 'Orbitron', sans-serif;
-    font-size: 22px;
+    font-size: 20px;
     font-weight: 900;
-    letter-spacing: 2px;
-    cursor: pointer;
-    
-    /* Glassmorphism */
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    box-shadow: var(--glow-green),
-                0 8px 32px 0 rgba(0, 255, 65, 0.3),
-                inset 0 0 20px rgba(0, 255, 65, 0.2);
-    
-    /* FIX CRITICO PER TABLET */
-    touch-action: manipulation;
-    -webkit-touch-callout: none;
-    position: relative;
-    z-index: 101;
-    
-    transition: all 0.2s ease;
+    box-shadow: var(--glow-green);
 }
 
-/* Stati del pulsante FLY */
-#btn-fly:active,
-#btn-fly.active {
-    background: radial-gradient(circle, rgba(0, 255, 65, 0.6), rgba(0, 255, 65, 0.3));
-    transform: scale(0.95);
-    box-shadow: var(--glow-green),
-                0 4px 16px 0 rgba(0, 255, 65, 0.5),
-                inset 0 0 30px rgba(255, 255, 255, 0.4);
-}
-
-#btn-fly:hover {
-    transform: scale(1.05);
-    background: radial-gradient(circle, rgba(0, 255, 65, 0.4), rgba(0, 255, 65, 0.15));
-}
-
-.fly-icon {
-    display: block;
-    pointer-events: none;
-}
-
-/* MOSTRA CONTROLLI SU DISPOSITIVI TOUCH */
-@media (pointer: coarse), (max-width: 1366px) and (orientation: landscape) {
-    #touch-controls { 
-        display: block;
-    }
-}
-
-/* Ottimizzazione per tablet specifici */
-@media (min-width: 768px) and (max-width: 1366px) and (orientation: landscape) {
-    #btn-fly {
-        width: 120px;
-        height: 120px;
-        font-size: 24px;
-    }
-    
-    #joystick-base {
-        width: 160px;
-        height: 160px;
-    }
-    
-    #joystick-stick {
-        width: 75px;
-        height: 75px;
-    }
-    
-    .controls-left { left: 40px; }
-    .controls-right { right: 40px; }
-}
-
-/* Ottimizzazione per smartphone */
-@media (max-width: 767px) and (orientation: landscape) {
-    #btn-fly {
-        width: 100px;
-        height: 100px;
-        font-size: 20px;
-    }
-    
-    #joystick-base {
-        width: 130px;
-        height: 130px;
-    }
-    
-    #joystick-stick {
-        width: 60px;
-        height: 60px;
-    }
-    
-    .controls-left { left: 15px; }
-    .controls-right { right: 15px; }
-}
-
-/* ============================================
-   ANIMAZIONI GENERICHE
-   ============================================ */
-
-.pulse {
-    animation: pulse 1s infinite;
-}
-
-@keyframes pulse {
-    0%, 100% { 
-        opacity: 1; 
-        transform: scale(1);
-    }
-    50% { 
-        opacity: 0.7;
-        transform: scale(1.05);
-    }
-}
-
-/* Effetto scanline opzionale per estetica retro */
-#game-canvas::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: repeating-linear-gradient(
-        0deg,
-        rgba(0, 0, 0, 0.15),
-        rgba(0, 0, 0, 0.15) 1px,
-        transparent 1px,
-        transparent 2px
-    );
-    pointer-events: none;
+@media (pointer: coarse) {
+    #touch-controls { display: block; }
 }

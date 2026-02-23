@@ -11,31 +11,12 @@
     <meta name="apple-mobile-web-app-title" content="ICAROUS">
     <meta name="theme-color" content="#000000">
 
-    <link rel="manifest" href="site.webmanifest">
-
     <link rel="icon" href="favicon.ico" sizes="any">
-    <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
-    <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
-
-    <meta property="og:title" content="ICAROUS">
-    <meta property="og:description" content="Gioca a Icarous, un arcade revival!">
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="https://sitarelli.github.io/thes/"> 
-    <meta property="og:image" content="https://sitarelli.github.io/thes/socialimage.png"> 
-    <meta property="og:image:width" content="1200">
-    <meta property="og:image:height" content="630">
-
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="ICAROUS">
-    <meta name="twitter:description" content="Gioca a Icarous, un'incredibile avventura arcade. Entra ora!">
-    <meta name="twitter:image" content="https://sitarelli.github.io/thes//socialimage.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
-
 
 <body>
 
@@ -43,7 +24,7 @@
 <div id="rotate-message" class="rotate-overlay">
     <div class="rotate-content">
         <div class="rotate-icon">📱</div>
-        <p>Per giocare a schermo intero <br>  su IPHONE: <br> <br> clicca su: <br>  <br> ... Condividi  <br><br> Altro <br> <br> Aggingi alla schermata Home <br> <br> <br> Lancia il gioco da icona <br> che si è creata <br> così potrai giocare <br> a schermo intero</p><br> <br> Se è disattivata <br> attiva la rotazione automatica.
+        <p>Per giocare a schermo intero <br> su IPHONE: <br><br> clicca su: <br><br> ... Condividi <br><br> Altro <br><br> Aggiungi alla schermata Home <br><br> Lancia il gioco da icona</p>
     </div>
 </div>
 
@@ -52,9 +33,9 @@
     <div class="tap-content">
         <div class="tap-title">ICAROUS</div>
         <div class="tap-subtitle">An MSX game Revival</div>
-         <div class="tap-button">TAP TO START</div>
-        <div class="tap-hint">Per IPHONE clicca su ... Condividi Altro Aggingi alla schermata Home Così il gioco poi andrà a schermo intero</div>
-        <div class="tap-debug" id="debug-info"></div>
+        <div class="tap-button">TAP TO START</div>
+        <div class="tap-hint">Usa il tasto fullscreen se disponibile</div>
+        <div class="tap-debug" id="debug-info">Caricamento...</div>
     </div>
 </div>
 
@@ -63,7 +44,7 @@
     <div id="power-bar"></div>
 </div>
 
-<!-- GAME OVER OVERLAY - centrato via CSS, sempre al centro dello schermo -->
+<!-- GAME OVER OVERLAY -->
 <div id="game-over-overlay">
     <div class="game-over-box">
         <div class="game-over-text">GAME OVER</div>
@@ -79,6 +60,13 @@
         <div class="title-compact">ICAROUS</div>
 
         <div id="hud-compact">
+            <!-- ZOOM CONTROLS: Design minimale ed elegante -->
+            <div class="hud-item zoom-area">
+                <button id="btn-zoom-out" class="zoom-btn">−</button>
+                <span class="zoom-icon">🔍</span>
+                <button id="btn-zoom-in" class="zoom-btn">+</button>
+            </div>
+
             <div class="hud-item">
                 <span class="hud-label">LV</span>
                 <span class="hud-value" id="level-display">01</span>
@@ -125,7 +113,6 @@
     </div>
 </div>
 
-<!-- CARICAMENTO MODULI ES6 -->
 <script type="module" src="main.js"></script>
 </body>
 </html>
