@@ -1,14 +1,21 @@
 {
-  "short_name": "Theseus",
-  "name": "Theseus Revival",
+  "name": "Icarous",
+  "short_name": "Icarous",
+  "description": "An arcade msx cavern escape revival",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#317EFB",
   "icons": [
     {
-      "src": "theseus.png",
+      "src": "/android-chrome-192x192.png",
       "sizes": "192x192",
       "type": "image/png"
+    },
+    {
+      "src": "/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
     }
-  ],
-  "start_url": "./index.html",
-  "display": "standalone",
-  "orientation": "landscape"
+  ]
 }
